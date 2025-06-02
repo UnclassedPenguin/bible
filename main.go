@@ -11,6 +11,7 @@ import (
     "strings"
 
     _ "github.com/mattn/go-sqlite3"
+		_ "embed"
 )
 
 type Bible struct {
@@ -28,25 +29,42 @@ type Args struct {
 	Verses		string
 }
 
+var embeddedDb []byte
+
 func main() {
-    // Define the -i flag for interactive mode
-    interactive := flag.Bool("i", false, "Enable interactive mode")
-		listMode := flag.Bool("l", false, "List Info")
-    flag.Parse()
+	// Create a temporary file to hold the embedded database
+	tmpFile, err := os.CreateTemp("", "kjv.db")
+	if err != nil {
+			log.Fatal(err)
+	}
+	defer os.Remove(tmpFile.Name()) // Clean up the temp file afterwards
 
-    db, err := sql.Open("sqlite3", "./kjv.db")
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer db.Close()
+	// Write the embedded database to the temporary file
+	if _, err := tmpFile.Write(embeddedDb); err != nil {
+			log.Fatal(err)
+	}
+	if err := tmpFile.Close(); err != nil {
+			log.Fatal(err)
+	}
 
-    if *interactive {
-        interactiveMode(db)
-		} else if *listMode {
-				infoMode(db)
-    } else {
-        singleShotMode(db)
-    }
+	// Define the -i flag for interactive mode
+	interactive := flag.Bool("i", false, "Enable interactive mode")
+	listMode := flag.Bool("l", false, "List Info")
+	flag.Parse()
+
+	db, err := sql.Open("sqlite3", "./kjv.db")
+	if err != nil {
+			log.Fatal(err)
+	}
+	defer db.Close()
+
+	if *interactive {
+			interactiveMode(db)
+	} else if *listMode {
+			infoMode(db)
+	} else {
+			singleShotMode(db)
+	}
 }
 
 // This is just to give info. If only book, give numbe of chapters. If book and chapter, give number of verses.
