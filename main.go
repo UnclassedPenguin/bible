@@ -108,7 +108,14 @@ func singleShotMode(db *sql.DB) {
 	// If just a book is provided
 	if len(os.Args) == 2 {
 		chapters := getAllChaptersInBook(db, args.BookName)
-		fmt.Println(chapters)
+		fmt.Printf("Chapters in %s:\n", args.BookName)
+		for i, num := range chapters {
+			if i > 0 {
+				fmt.Print(" ") // Print a space before each number except the first
+			}
+			fmt.Print(num)
+		}
+		fmt.Println()
 	}
 
 	// if a book and a chapter
@@ -136,14 +143,13 @@ func printBook() {
 func printChapters(db *sql.DB, args Args) {
 	// This is for a range of chapters ie "bible "1 Cornthians" 1-3"
 	if strings.Contains(args.Chapters, "-") {
-		fmt.Println("Contains ------")
 		chapters, err := getIntsStartAndEnd(args.Chapters)
 		if err != nil {
 			fmt.Println("Error getting all chapters: ", err)
 		}
 
 		for i := 0 ; i < len(chapters); i++{
-			fmt.Println(chapters[i])
+			fmt.Println("Chapter ", chapters[i])
 			// We need to get all the verses for the chapter
 			verses := getAllVersesInChapter(db, args.BookName, strconv.Itoa(chapters[i]))
 			var bibleVerse Bible
