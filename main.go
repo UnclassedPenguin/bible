@@ -9,9 +9,9 @@ import (
     "os/exec"
     "strconv"
     "strings"
+		_ "embed"
 
     _ "github.com/mattn/go-sqlite3"
-		_ "embed"
 )
 
 type Bible struct {
@@ -29,9 +29,13 @@ type Args struct {
 	Verses		string
 }
 
+//go:embed kjv.db
 var embeddedDb []byte
 
 func main() {
+	// Version number
+	version := "0.0.1"
+
 	// Create a temporary file to hold the embedded database
 	tmpFile, err := os.CreateTemp("", "kjv.db")
 	if err != nil {
@@ -50,9 +54,11 @@ func main() {
 	// Define the -i flag for interactive mode
 	interactive := flag.Bool("i", false, "Enable interactive mode")
 	listMode := flag.Bool("l", false, "List Info")
+	versionMode := flag.Bool("v", false, "Print Version")
 	flag.Parse()
 
-	db, err := sql.Open("sqlite3", "./kjv.db")
+	//db, err := sql.Open("sqlite3", "./kjv.db")
+	db, err := sql.Open("sqlite3", tmpFile.Name())
 	if err != nil {
 			log.Fatal(err)
 	}
@@ -62,6 +68,8 @@ func main() {
 			interactiveMode(db)
 	} else if *listMode {
 			infoMode(db)
+	} else if *versionMode {
+		fmt.Println(version)
 	} else {
 			singleShotMode(db)
 	}
