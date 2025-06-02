@@ -1,0 +1,144 @@
+package main
+
+import (
+    "database/sql"
+    "flag"
+    "fmt"
+    "log"
+//    "os"
+    "os/exec"
+    "strconv"
+    "strings"
+
+    _ "github.com/mattn/go-sqlite3"
+)
+
+type Bible struct {
+    ID       int
+    BookName string
+    Chapter  int
+    Verse    int
+    Text     string
+}
+
+func main() {
+    // Define the -i flag for interactive mode
+    interactive := flag.Bool("i", false, "Enable interactive mode")
+    flag.Parse()
+
+    db, err := sql.Open("sqlite3", "./kjv.db")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer db.Close()
+
+    if *interactive {
+        interactiveMode(db)
+    } else {
+        singleShotMode(db)
+    }
+}
+
+func singleShotMode(db *sql.DB) {
+    fmt.Println("Single Shot Mode")
+    fmt.Print("Enter the book name (e.g., Genesis): ")
+    var bookName string
+    fmt.Scan(&bookName)
+
+    fmt.Print("Enter the chapter number: ")
+    var chapter int
+    fmt.Scan(&chapter)
+
+    fmt.Print("Enter the verse number (or a range like 1-3): ")
+    var verseInput string
+    fmt.Scan(&verseInput)
+
+    verses := parseVerseInput(verseInput)
+    for _, verse := range verses {
+        var bibleVerse Bible
+        err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?", bookName, chapter, verse).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+        if err != nil {
+            fmt.Printf("Verse %s %d:%d not found.\n", bookName, chapter, verse)
+            continue
+        }
+        fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
+    }
+}
+
+func interactiveMode(db *sql.DB) {
+    fmt.Println("Interactive Mode")
+    fmt.Print("Enter the book name (e.g., Genesis): ")
+    var bookName string
+    fmt.Scan(&bookName)
+
+    fmt.Print("Enter the chapter number: ")
+    var chapter int
+    fmt.Scan(&chapter)
+
+    fmt.Print("Enter the starting verse number: ")
+    var startVerse int
+    fmt.Scan(&startVerse)
+
+    currentVerse := startVerse
+
+    for {
+        var bibleVerse Bible
+        err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?", bookName, chapter, currentVerse).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+        if err != nil {
+            fmt.Printf("Verse %s %d:%d not found.\n", bookName, chapter, currentVerse)
+            break
+        }
+
+        fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
+
+        fmt.Print("Press 'n' for next verse, 'b' for back, or 'q' to quit: ")
+        var input string
+        fmt.Scan(&input)
+
+        switch strings.ToLower(input) {
+        case "n":
+            currentVerse++
+        case "b":
+            if currentVerse > 1 {
+                currentVerse--
+            } else {
+                fmt.Println("You are at the first verse.")
+            }
+        case "q":
+            fmt.Println("Exiting interactive mode.")
+            return
+        default:
+            fmt.Println("Invalid input. Please enter 'n', 'b', or 'q'.")
+        }
+
+        // Clear the console for better readability
+        clearConsole()
+    }
+}
+
+func parseVerseInput(input string) []int {
+    var verses []int
+    if strings.Contains(input, "-") {
+        parts := strings.Split(input, "-")
+        start, _ := strconv.Atoi(parts[0])
+        end, _ := strconv.Atoi(parts[1])
+        for i := start; i <= end; i++ {
+            verses = append(verses, i)
+        }
+    } else {
+        verse, _ := strconv.Atoi(input)
+        verses = append(verses, verse)
+    }
+    return verses
+}
+
+func clearConsole() {
+    cmd := exec.Command("clear") // For Unix/Linux
+    if err := cmd.Run(); err != nil {
+        // If clearing fails, try for Windows
+        cmd = exec.Command("cmd", "/c", "cls")
+        if err := cmd.Run(); err != nil {
+            fmt.Println("Unable to clear console:", err)
+        }
+    }
+}
