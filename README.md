@@ -1,4 +1,5 @@
 Todo:
-[ ] - add a way to list all books.
+[ ] - Add a print function that wraps the print, so It doesn't split words. 
 [ ] - Add a print all? 
-[ ] - Add a random verse function
+[x] - add a way to list all books.
+[x] - Add a random verse function
