@@ -1,3 +1,9 @@
+//------------------------------------------------------------------------------
+// Bible program
+// Written by UnclassedPenguin
+// https://github.com/unclassedpenguin
+//------------------------------------------------------------------------------
+
 package main
 
 import (
@@ -9,11 +15,14 @@ import (
     "os/exec"
     "strconv"
     "strings"
+		"math/rand"
+		"time"
 		_ "embed"
 
     _ "github.com/mattn/go-sqlite3"
 )
 
+// This struct is to reference the sql database
 type Bible struct {
     ID       int
     BookName string
@@ -23,12 +32,30 @@ type Bible struct {
     Text     string
 }
 
+// This struct is to hold the command line argurments
 type Args struct {
 	BookName	string
 	Chapters  string
 	Verses		string
 }
 
+var allBooks = []string{
+    "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
+    "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
+    "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra",
+    "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
+    "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations",
+    "Ezekiel", "Daniel", "Hosea", "Joel", "Amos",
+    "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk",
+    "Zephaniah", "Haggai", "Zechariah", "Malachi", "Matthew",
+    "Mark", "Luke", "John", "Acts", "Romans",
+    "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians",
+    "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy",
+    "Titus", "Philemon", "Hebrews", "James", "1 Peter",
+    "2 Peter", "1 John", "2 John", "3 John", "Jude",
+    "Revelation",
+}
+// Embed the sql database into the binary
 //go:embed kjv.db
 var embeddedDb []byte
 
@@ -53,8 +80,11 @@ func main() {
 
 	// Define the -i flag for interactive mode
 	interactive := flag.Bool("i", false, "Enable interactive mode")
+	// Define -l flag for the list mode
 	listMode := flag.Bool("l", false, "List Info")
+	// Define -v flag for the version mode
 	versionMode := flag.Bool("v", false, "Print Version")
+	randomMode := flag.Bool("r", false, "Print random verse")
 	flag.Parse()
 
 	//db, err := sql.Open("sqlite3", "./kjv.db")
@@ -65,45 +95,77 @@ func main() {
 	defer db.Close()
 
 	if *interactive {
-			interactiveMode(db)
+		interactiveMode(db)
 	} else if *listMode {
-			infoMode(db)
+		infoMode(db)
 	} else if *versionMode {
 		fmt.Println(version)
+	} else if *randomMode {
+		randomVerse(db)
 	} else {
-			singleShotMode(db)
+		singleShotMode(db)
 	}
 }
 
-// This is just to give info. If only book, give numbe of chapters. If book and chapter, give number of verses.
+// Fucntion to print a random verse. use -r on command line
+func randomVerse(db *sql.DB) {
+	rand.Seed(time.Now().UnixNano())
+
+	// Get a random book
+	randomBook := allBooks[rand.Intn(66)]
+
+	// Get number of chapters in random book
+	chapters := getAllChaptersInBook(db, randomBook)
+
+	// Get random chapter
+	randomChapter := chapters[rand.Intn(len(chapters))]
+
+	// Get number of verses in chapter
+	verses := getAllVersesInChapter(db, randomBook, strconv.Itoa(randomChapter))
+
+	// Get random verse
+	randomVerse := verses[rand.Intn(len(verses))]
+
+	// Print Random Verse
+	var bibleVerse Bible
+	err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", randomBook, randomChapter, randomVerse).Scan(&bibleVerse.  ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+	if err != nil {
+		fmt.Printf("Verse %s %d:%d not found\n", randomBook, randomChapter, randomVerse)
+	}
+	fmt.Printf("%s %d %d:\n%s\n", randomBook, randomChapter, randomVerse, bibleVerse.Text)
+}
+
+// This is just to give info. If no other arguments, list all books. If only book, give number of chapters. If book and chapter, give number of verses.
 func infoMode(db *sql.DB) {
-  var args Args
-	args.BookName = os.Args[2]
+ 
+	// Print all books
+	if len(os.Args) == 2 {
+		for i := 0; i < len(allBooks); i++ {
+			// This is just for formatting. No comma and newline on last one
+			if i == len(allBooks)-1 {
+				fmt.Printf("%s\n", allBooks[i])
+			} else {
+				fmt.Printf("%s, ", allBooks[i])
+			}
+		}
+	}
 
 	// If just a book is provided
 	if len(os.Args) == 3 {
+		var args Args
+		args.BookName = os.Args[2]
+
 		chapters := getAllChaptersInBook(db, args.BookName)
-		fmt.Printf("Chapters in %s:\n", args.BookName)
-		for i, num := range chapters {
-			if i > 0 {
-				fmt.Print(" ") // Print a space before each number except the first
-			}
-			fmt.Print(num)
-		}
-		fmt.Println()
+		fmt.Printf("Chapters in %s: %d\n", args.BookName, len(chapters))
 	}
 
 	// if a book and a chapter
 	if len(os.Args) == 4 {
+		var args Args
+		args.BookName = os.Args[2]
 		args.Chapters = os.Args[3]
 		verses := getAllVersesInChapter(db, args.BookName, args.Chapters)
-		for i, num := range verses {
-			if i > 0 {
-				fmt.Print(" ") // Print a space before each number except the first
-			}
-			fmt.Print(num)
-		}
-		fmt.Println()
+		fmt.Printf("Verses in %s %s: %d\n", args.BookName, args.Chapters, len(verses))
 	}
 }
 
@@ -212,6 +274,7 @@ func printVerses(db *sql.DB, args Args) {
 	}
 }
 
+// This gives all chapters in a book
 func getAllChaptersInBook(db *sql.DB, bookName string) []int {
 	query := "SELECT chapter FROM bible WHERE bookName = ?"
 	rows, err := db.Query(query, bookName)
@@ -239,6 +302,7 @@ func getAllChaptersInBook(db *sql.DB, bookName string) []int {
 	return uniqueChapters
 }
 
+// This gives the number of verses in a chapter
 func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) []int {
     var verses []int
     query := "SELECT verse FROM bible WHERE bookName = ? AND chapter = ?"
