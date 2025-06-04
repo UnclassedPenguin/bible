@@ -172,6 +172,20 @@ func infoMode(db *sql.DB) {
 
 func singleShotMode(db *sql.DB) {
 
+	// Print all books
+	if len(os.Args) == 1 {
+		for i := 0; i < len(allBooks); i++ {
+			// This is just for formatting. No comma and newline on last one
+			if i == len(allBooks)-1 {
+				fmt.Printf("%s\n", allBooks[i])
+			} else {
+				fmt.Printf("%s, ", allBooks[i])
+			}
+		}
+		os.Exit(0)
+	}
+
+
 	var args Args
 	args.BookName = os.Args[1]
 
