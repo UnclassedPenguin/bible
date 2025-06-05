@@ -275,7 +275,7 @@ func searchForTerm(db *sql.DB, exactMode bool) {
     defer rows.Close()
 
 		if !rows.Next() {
-			fmt.Println("No search found matching: ", os.Args[3])
+			fmt.Println("No search found matching: ", os.Args[2])
 			os.Exit(0)
 		}
 
