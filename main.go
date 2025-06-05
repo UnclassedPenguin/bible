@@ -61,7 +61,7 @@ var embeddedDb []byte
 
 func main() {
 	// Version number
-	version := "0.0.1"
+	version := "0.0.2"
 
 	// Create a temporary file to hold the embedded database
 	tmpFile, err := os.CreateTemp("", "kjv.db")
@@ -85,6 +85,8 @@ func main() {
 	// Define -v flag for the version mode
 	versionMode := flag.Bool("v", false, "Print Version")
 	randomMode := flag.Bool("r", false, "Print random verse")
+	searchMode := flag.Bool("s", false, "search for term")
+	exactMode := flag.Bool("e", false, "search for exact term, use with -s")
 	flag.Parse()
 
 	//db, err := sql.Open("sqlite3", "./kjv.db")
@@ -102,6 +104,8 @@ func main() {
 		fmt.Println(version)
 	} else if *randomMode {
 		randomVerse(db)
+	} else if *searchMode {
+		searchForTerm(db, *exactMode)
 	} else {
 		singleShotMode(db)
 	}
@@ -166,6 +170,129 @@ func infoMode(db *sql.DB) {
 		args.Chapters = os.Args[3]
 		verses := getAllVersesInChapter(db, args.BookName, args.Chapters)
 		fmt.Printf("Verses in %s %s: %d\n", args.BookName, args.Chapters, len(verses))
+	}
+}
+
+
+// This 'worked" But not great...
+// //Search for a term or an exact term
+//func searchForTerm(db *sql.DB, exactMode bool) {
+//	// This executes an exact search for the search term
+//	if exactMode {
+//		query := "select bookName, chapter, verse, text from bible where text like ?"
+//		rows, err := db.Query(query, "% "+os.Args[3]+" %")
+//		if err != nil {
+//			log.Fatal(err)
+//		}
+//    defer rows.Close()
+//
+//		if !rows.Next() {
+//			fmt.Println("No search found matching: ", os.Args[3])
+//		}
+//
+//		for rows.Next() {
+//			var bible Bible
+//			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
+//			if err != nil {
+//				fmt.Println("Error reading row(exact search): ", err)
+//				os.Exit(1)
+//			}
+//
+//			fmt.Printf("%s %d %d: %s\n", bible.BookName, bible.Chapter, bible.Verse, bible.Text)
+//		}
+//
+//	// This executes a search that takes any match, ie love with match with loved
+//	} else {
+//		query := "select bookName, chapter, verse, text from bible where text like ?"
+//		rows, err := db.Query(query, "%"+os.Args[2]+"%")
+//		if err != nil {
+//			log.Fatal(err)
+//		}
+//    defer rows.Close()
+//
+//		if !rows.Next() {
+//			fmt.Println("No search found matching: ", os.Args[3])
+//		}
+//
+//
+//		for rows.Next() {
+//			var bible Bible
+//			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
+//			if err != nil {
+//				fmt.Println("Error reading row(exact search): ", err)
+//				os.Exit(1)
+//			}
+//
+//			fmt.Printf("%s %d %d: %s\n", bible.BookName, bible.Chapter, bible.Verse, bible.Text)
+//		}
+//
+//		}
+//	os.Exit(0)
+//}
+
+
+// Search for a term or an exact term
+func searchForTerm(db *sql.DB, exactMode bool) {
+	// This executes an exact search for the search term
+	if exactMode {
+		query := "select bookName, chapter, verse, text from bible where text like ?"
+		rows, err := db.Query(query, "% "+os.Args[3]+" %")
+		if err != nil {
+			fmt.Println("Error in query of exact search: ", err)
+			os.Exit(1)
+		}
+    defer rows.Close()
+
+		if !rows.Next() {
+			fmt.Println("No search found matching: ", os.Args[3])
+			os.Exit(0)
+		}
+
+		for {
+			var bible Bible
+			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
+			if err != nil {
+				fmt.Println("Error reading row(exact search): ", err)
+				os.Exit(1)
+			}
+
+			fmt.Printf("%s %d %d: %s\n", bible.BookName, bible.Chapter, bible.Verse, bible.Text)
+
+			if !rows.Next() {
+				break
+			}
+		}
+
+	// This executes a search that takes any match, ie love with match with loved
+	} else {
+		query := "select bookName, chapter, verse, text from bible where text like ?"
+		// This is the only thing that is different from exact search. No spaces around the search term
+		rows, err := db.Query(query, "%"+os.Args[2]+"%")
+		if err != nil {
+			fmt.Println("Error in query of exact search: ", err)
+			os.Exit(1)
+		}
+    defer rows.Close()
+
+		if !rows.Next() {
+			fmt.Println("No search found matching: ", os.Args[3])
+			os.Exit(0)
+		}
+
+		for {
+			var bible Bible
+			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
+			if err != nil {
+				fmt.Println("Error reading row(exact search): ", err)
+				os.Exit(1)
+			}
+
+			fmt.Printf("%s %d %d: %s\n", bible.BookName, bible.Chapter, bible.Verse, bible.Text)
+
+			if !rows.Next() {
+				break
+			}
+		}
 	}
 }
 
