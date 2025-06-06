@@ -104,7 +104,7 @@ func main() {
 	} else if *versionMode {
 		fmt.Println(version)
 	} else if *randomMode {
-		randomVerse(db)
+		printRandomVerse(db)
 	} else if *searchMode {
 		searchForTerm(db, *exactMode)
 	} else {
@@ -112,8 +112,8 @@ func main() {
 	}
 }
 
-// Fucntion to print a random verse. use -r on command line
-func randomVerse(db *sql.DB) {
+// This returns a random book, chapter and verse in a string array
+func randomVerse(db *sql.DB) []string {
 	rand.Seed(time.Now().UnixNano())
 
 	// Get a random book
@@ -131,13 +131,29 @@ func randomVerse(db *sql.DB) {
 	// Get random verse
 	randomVerse := verses[rand.Intn(len(verses))]
 
-	// Print Random Verse
+	return []string{randomBook, strconv.Itoa(randomChapter), strconv.Itoa(randomVerse)}
+}
+
+// Print Verse
+func printVerse(db *sql.DB, book string, chapter string, verse string) {
+	
+	chapterInt, _ := strconv.Atoi(chapter)
+	verseInt, _ := strconv.Atoi(verse)
+
 	var bibleVerse Bible
-	err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", randomBook, randomChapter, randomVerse).Scan(&bibleVerse.  ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+	err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", book, chapterInt, verseInt).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
 	if err != nil {
-		fmt.Printf("Verse %s %d:%d not found\n", randomBook, randomChapter, randomVerse)
+		fmt.Printf("Verse %s %s:%s not found\n", book, chapter, verse)
 	}
-	fmt.Printf("%s %d %d:\n%s\n", randomBook, randomChapter, randomVerse, bibleVerse.Text)
+	fmt.Printf("%s %s %s:\n%s\n", book, chapter, verse, bibleVerse.Text)
+}
+
+// Fucntion to print a random verse. use -r on command line
+func printRandomVerse(db *sql.DB) {
+	// Get random verse
+	random := randomVerse(db)
+	// Print random verse
+	printVerse(db, random[0], random[1], random[2])
 }
 
 // This is just to give info. If no other arguments, list all books. If only book, give number of chapters. If book and chapter, give number of verses.
