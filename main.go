@@ -7,29 +7,30 @@
 package main
 
 import (
-    "database/sql"
-    "flag"
-    "fmt"
-    "log"
-    "os"
-    "os/exec"
-    "strconv"
-    "strings"
-		"math/rand"
-		"time"
-		_ "embed"
+	"bufio"
+	"database/sql"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	"math/rand"
+	"time"
+	_ "embed"
 
-    _ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // This struct is to reference the sql database
 type Bible struct {
-    ID       int
-    BookName string
-		Book		 int
-    Chapter  int
-    Verse    int
-    Text     string
+	ID       int
+	BookName string
+	Book		 int
+	Chapter  int
+	Verse    int
+	Text     string
 }
 
 // This struct is to hold the command line argurments
@@ -493,55 +494,78 @@ func getIntsStartAndEnd(s string) ([]int, error) {
 	return ints, nil
 }
 
+
 func interactiveMode(db *sql.DB) {
-    fmt.Println("Interactive Mode")
-    fmt.Print("Enter the book name (e.g., Genesis): ")
-    var bookName string
-    fmt.Scan(&bookName)
+	// Get user input 
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter Book Chapter Verse(ie Genesis 1 1): ")
+	bookChapterVerse, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading input:", err)
+		return
+	}
 
-    fmt.Print("Enter the chapter number: ")
-    var chapter int
-    fmt.Scan(&chapter)
+	// Clean the white space (including the newline character)
+	userInput := strings.TrimSpace(bookChapterVerse)
 
-    fmt.Print("Enter the starting verse number: ")
-    var startVerse int
-    fmt.Scan(&startVerse)
+	bookChapterVerseSplit := strings.Split(userInput, " ")
+	bookName := bookChapterVerseSplit[0]
+	chapter, _ := strconv.Atoi(bookChapterVerseSplit[1])
+	startVerse, _ := strconv.Atoi(bookChapterVerseSplit[2])
+	currentVerse := startVerse
 
-    currentVerse := startVerse
+	// Diagnostics
+	//fmt.Println("split: ", bookChapterVerseSplit)
+	//fmt.Printf("split type: %T\n", bookChapterVerseSplit)
+	//fmt.Println("split length: ", len(bookChapterVerseSplit))
 
-    for {
-        var bibleVerse Bible
-        err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?", bookName, chapter, currentVerse).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
-        if err != nil {
-            fmt.Printf("Verse %s %d:%d not found.\n", bookName, chapter, currentVerse)
-            break
-        }
+	//fmt.Println("bookName: ", bookName)
+	//fmt.Printf("bookName Type: %T\n", bookName)
+	
+	//fmt.Println("chapter: ", chapter)
+	//fmt.Printf("chapter Type: %T\n", chapter)
 
-        fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
+	//fmt.Println("startVerse: ", startVerse)
+	//fmt.Printf("startVerse Type: %T\n", startVerse)
 
-        fmt.Print("Press 'n' for next verse, 'b' for back, or 'q' to quit: ")
-        var input string
-        fmt.Scan(&input)
+	//fmt.Println("currentVerse: ", currentVerse)
+	//fmt.Printf("currentVerse Type: %T\n", currentVerse)
 
-        switch strings.ToLower(input) {
-        case "n":
-            currentVerse++
-        case "b":
-            if currentVerse > 1 {
-                currentVerse--
-            } else {
-                fmt.Println("You are at the first verse.")
-            }
-        case "q":
-            fmt.Println("Exiting interactive mode.")
-            return
-        default:
-            fmt.Println("Invalid input. Please enter 'n', 'b', or 'q'.")
-        }
+	fmt.Print("\nPress 'n' for next verse, 'p' for prev, or 'q' to quit: \n\n")
 
-        // Clear the console for better readability
-        clearConsole()
-    }
+	for {
+		var bibleVerse Bible
+		err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?", bookName, chapter, currentVerse).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+		if err != nil {
+			fmt.Printf("Verse %s %d:%d not found.\n", bookName, chapter, currentVerse)
+			break
+		}
+
+		fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
+
+		fmt.Print(": ")
+		var input string
+		fmt.Scan(&input)
+
+		switch strings.ToLower(input) {
+		case "n":
+			currentVerse++
+		case "p":
+			if currentVerse > 1 {
+				currentVerse--
+			} else {
+				fmt.Println("You are at the first verse.")
+			}
+		case "q":
+			fmt.Println("Exiting interactive mode.")
+			return
+		default:
+			fmt.Println("Invalid input. Please enter 'n', 'p', or 'q'.")
+		}
+
+		// Clear the console for better readability
+		clearConsole()
+	}
 }
 
 func parseVerseInput(input string) []int {
