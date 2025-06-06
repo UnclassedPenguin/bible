@@ -1,5 +1,6 @@
 Todo:
 [ ] - Need some basic restructuring. Anytime a verse is printed, it should call a function (printVerse) that takes the book, the chapter, the verse. I think this will simplify things in the long run...
+[ ] - randomVerse should be a fucntion that returns [string, int, int] ie [bookName, chapter, verse]
 [ ] - Write documentation for program
 [ ] - Add random function to interactive mode
 [ ] - Clean up interactive mode, make it not so ugly. 
