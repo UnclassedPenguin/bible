@@ -56,9 +56,11 @@ var allBooks = []string{
     "2 Peter", "1 John", "2 John", "3 John", "Jude",
     "Revelation",
 }
+
 // Embed the sql database into the binary
 //go:embed kjv.db
 var embeddedDb []byte
+
 
 func main() {
 	// Version number
@@ -88,6 +90,7 @@ func main() {
 	randomMode := flag.Bool("r", false, "Print random verse")
 	searchMode := flag.Bool("s", false, "search for term")
 	exactMode := flag.Bool("e", false, "search for exact term, use with -s")
+	testMode := flag.Bool("t", false, "Test function, for testing.")
 	flag.Parse()
 
 	//db, err := sql.Open("sqlite3", "./kjv.db")
@@ -107,58 +110,106 @@ func main() {
 		printRandomVerse(db)
 	} else if *searchMode {
 		searchForTerm(db, *exactMode)
+	} else if *testMode {
+		testFunction(db)
 	} else {
 		singleShotMode(db)
 	}
 }
 
-// This returns a random book, chapter and verse in a string array
-func randomVerse(db *sql.DB) []string {
-	rand.Seed(time.Now().UnixNano())
 
-	// Get a random book
-	randomBook := allBooks[rand.Intn(66)]
+func testFunction(db *sql.DB) {
+	var book string
+	var chapter string
+	var verse string
+	fmt.Println("Book: ")
+	fmt.Scan(&book)
+	fmt.Println("Chatper: ")
+	fmt.Scan(&chapter)
+	fmt.Println("Verse: ")
+	fmt.Scan(&verse)
 
-	// Get number of chapters in random book
-	chapters := getAllChaptersInBook(db, randomBook)
-
-	// Get random chapter
-	randomChapter := chapters[rand.Intn(len(chapters))]
-
-	// Get number of verses in chapter
-	verses := getAllVersesInChapter(db, randomBook, strconv.Itoa(randomChapter))
-
-	// Get random verse
-	randomVerse := verses[rand.Intn(len(verses))]
-
-	return []string{randomBook, strconv.Itoa(randomChapter), strconv.Itoa(randomVerse)}
+	id := getIdOfVerse(db, book, chapter, verse)
+	fmt.Printf("ID: %d\n", id)
 }
 
-// Print Verse
-func printVerse(db *sql.DB, book string, chapter string, verse string) {
-	
-	chapterInt, _ := strconv.Atoi(chapter)
-	verseInt, _ := strconv.Atoi(verse)
 
-	var bibleVerse Bible
-	err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", book, chapterInt, verseInt).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+func interactiveMode(db *sql.DB) {
+	// Get user input 
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter Book Chapter Verse(ie Genesis 1 1): ")
+	bookChapterVerse, err := reader.ReadString('\n')
 	if err != nil {
-		fmt.Printf("Verse %s %s:%s not found\n", book, chapter, verse)
+		fmt.Println("Error reading input:", err)
+		return
 	}
-	fmt.Printf("%s %s %s:\n%s\n", book, chapter, verse, bibleVerse.Text)
+
+	// Clean the white space (including the newline character)
+	userInput := strings.TrimSpace(bookChapterVerse)
+
+	bookChapterVerseSplit := strings.Split(userInput, " ")
+	bookName := bookChapterVerseSplit[0]
+	chapter, _ := strconv.Atoi(bookChapterVerseSplit[1])
+	startVerse, _ := strconv.Atoi(bookChapterVerseSplit[2])
+	currentVerse := startVerse
+
+	// Diagnostics
+	//fmt.Println("split: ", bookChapterVerseSplit)
+	//fmt.Printf("split type: %T\n", bookChapterVerseSplit)
+	//fmt.Println("split length: ", len(bookChapterVerseSplit))
+
+	//fmt.Println("bookName: ", bookName)
+	//fmt.Printf("bookName Type: %T\n", bookName)
+	
+	//fmt.Println("chapter: ", chapter)
+	//fmt.Printf("chapter Type: %T\n", chapter)
+
+	//fmt.Println("startVerse: ", startVerse)
+	//fmt.Printf("startVerse Type: %T\n", startVerse)
+
+	//fmt.Println("currentVerse: ", currentVerse)
+	//fmt.Printf("currentVerse Type: %T\n", currentVerse)
+
+	fmt.Print("\nPress 'n' for next verse, 'p' for prev, or 'q' to quit: \n\n")
+
+	for {
+		var bibleVerse Bible
+		err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?", bookName, chapter, currentVerse).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+		if err != nil {
+			fmt.Printf("Verse %s %d:%d not found.\n", bookName, chapter, currentVerse)
+			break
+		}
+
+		fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
+
+		fmt.Print(": ")
+		var input string
+		fmt.Scan(&input)
+
+		switch strings.ToLower(input) {
+		case "n":
+			currentVerse++
+		case "p":
+			if currentVerse > 1 {
+				currentVerse--
+			} else {
+				fmt.Println("You are at the first verse.")
+			}
+		case "q":
+			fmt.Println("Exiting interactive mode.")
+			return
+		default:
+			fmt.Println("Invalid input. Please enter 'n', 'p', or 'q'.")
+		}
+
+		// Clear the console for better readability
+		clearConsole()
+	}
 }
 
-// Fucntion to print a random verse. use -r on command line
-func printRandomVerse(db *sql.DB) {
-	// Get random verse
-	random := randomVerse(db)
-	// Print random verse
-	printVerse(db, random[0], random[1], random[2])
-}
 
 // This is just to give info. If no other arguments, list all books. If only book, give number of chapters. If book and chapter, give number of verses.
 func infoMode(db *sql.DB) {
- 
 	// Print all books
 	if len(os.Args) == 2 {
 		for i := 0; i < len(allBooks); i++ {
@@ -191,61 +242,51 @@ func infoMode(db *sql.DB) {
 }
 
 
-// This 'worked" But not great...
-// //Search for a term or an exact term
-//func searchForTerm(db *sql.DB, exactMode bool) {
-//	// This executes an exact search for the search term
-//	if exactMode {
-//		query := "select bookName, chapter, verse, text from bible where text like ?"
-//		rows, err := db.Query(query, "% "+os.Args[3]+" %")
-//		if err != nil {
-//			log.Fatal(err)
-//		}
-//    defer rows.Close()
-//
-//		if !rows.Next() {
-//			fmt.Println("No search found matching: ", os.Args[3])
-//		}
-//
-//		for rows.Next() {
-//			var bible Bible
-//			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
-//			if err != nil {
-//				fmt.Println("Error reading row(exact search): ", err)
-//				os.Exit(1)
-//			}
-//
-//			fmt.Printf("%s %d %d: %s\n", bible.BookName, bible.Chapter, bible.Verse, bible.Text)
-//		}
-//
-//	// This executes a search that takes any match, ie love with match with loved
-//	} else {
-//		query := "select bookName, chapter, verse, text from bible where text like ?"
-//		rows, err := db.Query(query, "%"+os.Args[2]+"%")
-//		if err != nil {
-//			log.Fatal(err)
-//		}
-//    defer rows.Close()
-//
-//		if !rows.Next() {
-//			fmt.Println("No search found matching: ", os.Args[3])
-//		}
-//
-//
-//		for rows.Next() {
-//			var bible Bible
-//			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
-//			if err != nil {
-//				fmt.Println("Error reading row(exact search): ", err)
-//				os.Exit(1)
-//			}
-//
-//			fmt.Printf("%s %d %d: %s\n", bible.BookName, bible.Chapter, bible.Verse, bible.Text)
-//		}
-//
-//		}
-//	os.Exit(0)
-//}
+// This returns a random book, chapter and verse in a string array
+func randomVerse(db *sql.DB) []string {
+	rand.Seed(time.Now().UnixNano())
+
+	// Get a random book
+	randomBook := allBooks[rand.Intn(66)]
+
+	// Get number of chapters in random book
+	chapters := getAllChaptersInBook(db, randomBook)
+
+	// Get random chapter
+	randomChapter := chapters[rand.Intn(len(chapters))]
+
+	// Get number of verses in chapter
+	verses := getAllVersesInChapter(db, randomBook, strconv.Itoa(randomChapter))
+
+	// Get random verse
+	randomVerse := verses[rand.Intn(len(verses))]
+
+	return []string{randomBook, strconv.Itoa(randomChapter), strconv.Itoa(randomVerse)}
+}
+
+
+// Print Verse
+func printVerse(db *sql.DB, book string, chapter string, verse string) {
+	
+	chapterInt, _ := strconv.Atoi(chapter)
+	verseInt, _ := strconv.Atoi(verse)
+
+	var bibleVerse Bible
+	err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", book, chapterInt, verseInt).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+	if err != nil {
+		fmt.Printf("Verse %s %s:%s not found\n", book, chapter, verse)
+	}
+	fmt.Printf("%s %s %s:\n%s\n", book, chapter, verse, bibleVerse.Text)
+}
+
+
+// Fucntion to print a random verse. use -r on command line
+func printRandomVerse(db *sql.DB) {
+	// Get random verse
+	random := randomVerse(db)
+	// Print random verse
+	printVerse(db, random[0], random[1], random[2])
+}
 
 
 // Search for a term or an exact term
@@ -286,7 +327,7 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 		// This is the only thing that is different from exact search. No spaces around the search term
 		rows, err := db.Query(query, "%"+os.Args[2]+"%")
 		if err != nil {
-			fmt.Println("Error in query of exact search: ", err)
+			fmt.Println("Error in query of search: ", err)
 			os.Exit(1)
 		}
     defer rows.Close()
@@ -300,7 +341,7 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 			var bible Bible
 			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
 			if err != nil {
-				fmt.Println("Error reading row(exact search): ", err)
+				fmt.Println("Error reading row(search): ", err)
 				os.Exit(1)
 			}
 
@@ -432,6 +473,21 @@ func printVerses(db *sql.DB, args Args) {
 	}
 }
 
+
+// Get the id of a verse. Would be useful in interactive mode, so that then you could just go next or previous based on id.
+func getIdOfVerse(db *sql.DB, bookName string, chapter string, verse string) int {
+	var id int
+	query := "SELECT id FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?"
+	err := db.QueryRow(query, bookName, chapter, verse).Scan(&id)
+	if err != nil {
+		fmt.Printf("Can't get id of %s %s %s: ", bookName, chapter, verse)
+		fmt.Println(err)
+	}
+	
+	return id
+}
+
+
 // This gives all chapters in a book
 func getAllChaptersInBook(db *sql.DB, bookName string) []int {
 	query := "SELECT chapter FROM bible WHERE bookName = ?"
@@ -510,79 +566,6 @@ func getIntsStartAndEnd(s string) ([]int, error) {
 	return ints, nil
 }
 
-
-func interactiveMode(db *sql.DB) {
-	// Get user input 
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter Book Chapter Verse(ie Genesis 1 1): ")
-	bookChapterVerse, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("Error reading input:", err)
-		return
-	}
-
-	// Clean the white space (including the newline character)
-	userInput := strings.TrimSpace(bookChapterVerse)
-
-	bookChapterVerseSplit := strings.Split(userInput, " ")
-	bookName := bookChapterVerseSplit[0]
-	chapter, _ := strconv.Atoi(bookChapterVerseSplit[1])
-	startVerse, _ := strconv.Atoi(bookChapterVerseSplit[2])
-	currentVerse := startVerse
-
-	// Diagnostics
-	//fmt.Println("split: ", bookChapterVerseSplit)
-	//fmt.Printf("split type: %T\n", bookChapterVerseSplit)
-	//fmt.Println("split length: ", len(bookChapterVerseSplit))
-
-	//fmt.Println("bookName: ", bookName)
-	//fmt.Printf("bookName Type: %T\n", bookName)
-	
-	//fmt.Println("chapter: ", chapter)
-	//fmt.Printf("chapter Type: %T\n", chapter)
-
-	//fmt.Println("startVerse: ", startVerse)
-	//fmt.Printf("startVerse Type: %T\n", startVerse)
-
-	//fmt.Println("currentVerse: ", currentVerse)
-	//fmt.Printf("currentVerse Type: %T\n", currentVerse)
-
-	fmt.Print("\nPress 'n' for next verse, 'p' for prev, or 'q' to quit: \n\n")
-
-	for {
-		var bibleVerse Bible
-		err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?", bookName, chapter, currentVerse).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
-		if err != nil {
-			fmt.Printf("Verse %s %d:%d not found.\n", bookName, chapter, currentVerse)
-			break
-		}
-
-		fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
-
-		fmt.Print(": ")
-		var input string
-		fmt.Scan(&input)
-
-		switch strings.ToLower(input) {
-		case "n":
-			currentVerse++
-		case "p":
-			if currentVerse > 1 {
-				currentVerse--
-			} else {
-				fmt.Println("You are at the first verse.")
-			}
-		case "q":
-			fmt.Println("Exiting interactive mode.")
-			return
-		default:
-			fmt.Println("Invalid input. Please enter 'n', 'p', or 'q'.")
-		}
-
-		// Clear the console for better readability
-		clearConsole()
-	}
-}
 
 func parseVerseInput(input string) []int {
     var verses []int
