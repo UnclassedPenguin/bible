@@ -149,10 +149,10 @@ func interactiveMode(db *sql.DB) {
 
 	bookChapterVerseSplit := strings.Split(userInput, " ")
 	bookName := bookChapterVerseSplit[0]
-	chapter, _ := strconv.Atoi(bookChapterVerseSplit[1])
-	startVerse, _ := strconv.Atoi(bookChapterVerseSplit[2])
-	currentVerse := startVerse
+	chapter := bookChapterVerseSplit[1]
+	verse := bookChapterVerseSplit[2]
 
+	id := getIdOfVerse(db, bookName, chapter, verse)
 	// Diagnostics
 	//fmt.Println("split: ", bookChapterVerseSplit)
 	//fmt.Printf("split type: %T\n", bookChapterVerseSplit)
@@ -172,11 +172,12 @@ func interactiveMode(db *sql.DB) {
 
 	fmt.Print("\nPress 'n' for next verse, 'p' for prev, or 'q' to quit: \n\n")
 
+	// This is the main loop of interactive mode. Prints out the verse based on the id number
 	for {
 		var bibleVerse Bible
-		err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?", bookName, chapter, currentVerse).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+		err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE id = ?", id).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
 		if err != nil {
-			fmt.Printf("Verse %s %d:%d not found.\n", bookName, chapter, currentVerse)
+			fmt.Printf("Verse %s %d:%d not found.\n", bookName, chapter, verse)
 			break
 		}
 
@@ -188,10 +189,10 @@ func interactiveMode(db *sql.DB) {
 
 		switch strings.ToLower(input) {
 		case "n":
-			currentVerse++
+			id++
 		case "p":
-			if currentVerse > 1 {
-				currentVerse--
+			if id > 1 {
+				id--
 			} else {
 				fmt.Println("You are at the first verse.")
 			}
