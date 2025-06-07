@@ -135,24 +135,46 @@ func testFunction(db *sql.DB) {
 
 
 func interactiveMode(db *sql.DB) {
-	// Get user input 
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter Book Chapter Verse(ie Genesis 1 1): ")
-	bookChapterVerse, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("Error reading input:", err)
-		return
+	var bookName string
+	var chapter string
+	var verse string
+	var id int
+	
+	// Loop to get initial input from user. 
+	for {
+		// Get user input 
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Enter Book Chapter Verse(ie Genesis 1 1): ")
+		bookChapterVerse, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input:", err)
+			return
+		}
+
+		// Clean the white space (including the newline character)
+		userInput := strings.TrimSpace(bookChapterVerse)
+
+		// Split the user input into its parts (should be book chapter verse or 'r' for random
+		bookChapterVerseSplit := strings.Split(userInput, " ")
+
+		// Check if it was 'r' for random, and if so, get id of random verse to start at
+		if len(bookChapterVerseSplit) == 1 && bookChapterVerseSplit[0] == "r" {
+			rVerse := randomVerse(db)
+			id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
+			break
+		// If any other single character, prompt proper usage
+		} else if len(bookChapterVerseSplit) == 1 {
+			fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
+		// If Specific book chapter verse to start at, get the id
+		} else {
+			bookName = bookChapterVerseSplit[0]
+			chapter = bookChapterVerseSplit[1]
+			verse = bookChapterVerseSplit[2]
+			id = getIdOfVerse(db, bookName, chapter, verse)
+			break
+		}
 	}
 
-	// Clean the white space (including the newline character)
-	userInput := strings.TrimSpace(bookChapterVerse)
-
-	bookChapterVerseSplit := strings.Split(userInput, " ")
-	bookName := bookChapterVerseSplit[0]
-	chapter := bookChapterVerseSplit[1]
-	verse := bookChapterVerseSplit[2]
-
-	id := getIdOfVerse(db, bookName, chapter, verse)
 	// Diagnostics
 	//fmt.Println("split: ", bookChapterVerseSplit)
 	//fmt.Printf("split type: %T\n", bookChapterVerseSplit)
@@ -170,7 +192,8 @@ func interactiveMode(db *sql.DB) {
 	//fmt.Println("currentVerse: ", currentVerse)
 	//fmt.Printf("currentVerse Type: %T\n", currentVerse)
 
-	fmt.Print("\nPress 'n' for next verse, 'p' for prev, or 'q' to quit: \n\n")
+	// Info for usage
+	fmt.Print("\nPress 'n' for next verse, 'p' for prev, 'r' for random, or 'q' to quit: \n\n")
 
 	// This is the main loop of interactive mode. Prints out the verse based on the id number
 	for {
@@ -181,26 +204,36 @@ func interactiveMode(db *sql.DB) {
 			break
 		}
 
+		// This actually prints the verse
 		fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
 
+		// Prompt for next command
 		fmt.Print(": ")
 		var input string
 		fmt.Scan(&input)
 
 		switch strings.ToLower(input) {
+		// Go to next verse
 		case "n":
 			id++
+		// Go to prev verse
 		case "p":
 			if id > 1 {
 				id--
 			} else {
 				fmt.Println("You are at the first verse.")
 			}
+		//Get a random verse
+		case "r":
+			rVerse := randomVerse(db)
+			//Get id of random verse
+			id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
+		// quit :p
 		case "q":
 			fmt.Println("Exiting interactive mode.")
 			return
 		default:
-			fmt.Println("Invalid input. Please enter 'n', 'p', or 'q'.")
+			fmt.Println("Invalid input. Please enter 'n', 'p', 'r' or 'q'.")
 		}
 
 		// Clear the console for better readability
