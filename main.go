@@ -64,7 +64,7 @@ var embeddedDb []byte
 
 func main() {
 	// Version number
-	version := "0.0.3"
+	version := "0.0.4"
 
 	// Create a temporary file to hold the embedded database
 	tmpFile, err := os.CreateTemp("", "kjv.db")
