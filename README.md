@@ -1,7 +1,6 @@
 Todo:
 [ ] - Need some basic restructuring. Anytime a verse is printed, it should call a function (printVerse) that takes the book, the chapter, the verse. I think this will simplify things in the long run...
 [ ] - Write documentation for program
-[ ] - Add random function to interactive mode
 [ ] - Clean up interactive mode, make it not so ugly. 
    [ ] - Interactive should be able to basically have a command line, sort of like vim. That at anytime you can do a book or a chapter or a verse. 
 [ ] - add bookmark function
@@ -12,3 +11,4 @@ Todo:
 [x] - Add a random verse function
 [x] - add search function. Search for a word, give all verses with it in it
 [x] - randomVerse should be a fucntion that returns [string, int, int] ie [bookName, chapter, verse]
+[x] - Add random function to interactive mode
