@@ -1,4 +1,5 @@
 Todo:
+[ ] - Maybe change word wrap so that it always leaves at least 1 space on the right side...Basically have to just make termWidth = termWidth - 1 I think..
 [ ] - Need some basic restructuring. Anytime a verse is printed, it should call a function (printVerse) that takes the book, the chapter, the verse. I think this will simplify things in the long run...
 [ ] - Write documentation for program
 [ ] - Clean up interactive mode, make it not so ugly. 
