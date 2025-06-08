@@ -161,6 +161,12 @@ func interactiveMode(db *sql.DB) {
                     verse = bookChapterVerseSplit[3]
                     id = getIdOfVerse(db, bookName, chapter, verse)
                     break
+                  } else if  bookChapterVerseSplit[0][0] == '\'' {
+                    bookName = strings.Trim(bookChapterVerseSplit[0] + " " + bookChapterVerseSplit[1], "'")
+                    chapter = bookChapterVerseSplit[2]
+                    verse = bookChapterVerseSplit[3]
+                    id = getIdOfVerse(db, bookName, chapter, verse)
+                    break
                   // If not a numbered book, get the verse
                   } else {
                     bookName = bookChapterVerseSplit[0]
