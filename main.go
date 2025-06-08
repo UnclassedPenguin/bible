@@ -18,8 +18,8 @@ import (
 	"strings"
 	"math/rand"
 	"time"
+	"golang.org/x/term"
 	_ "embed"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -62,9 +62,10 @@ var allBooks = []string{
 var embeddedDb []byte
 
 
+// The main function :p (The more comments the better!)
 func main() {
 	// Version number
-	version := "0.0.4"
+	version := "v0.1.0"
 
 	// Create a temporary file to hold the embedded database
 	tmpFile, err := os.CreateTemp("", "kjv.db")
@@ -100,6 +101,7 @@ func main() {
 	}
 	defer db.Close()
 
+	// These are all the different "modes"
 	if *interactive {
 		interactiveMode(db)
 	} else if *listMode {
@@ -118,22 +120,7 @@ func main() {
 }
 
 
-func testFunction(db *sql.DB) {
-	var book string
-	var chapter string
-	var verse string
-	fmt.Println("Book: ")
-	fmt.Scan(&book)
-	fmt.Println("Chatper: ")
-	fmt.Scan(&chapter)
-	fmt.Println("Verse: ")
-	fmt.Scan(&verse)
-
-	id := getIdOfVerse(db, book, chapter, verse)
-	fmt.Printf("ID: %d\n", id)
-}
-
-
+// This is the main interactive mode that opens up a "command line" that you can interact with and change verses.
 func interactiveMode(db *sql.DB) {
 	var bookName string
 	var chapter string
@@ -192,11 +179,12 @@ func interactiveMode(db *sql.DB) {
 	//fmt.Println("currentVerse: ", currentVerse)
 	//fmt.Printf("currentVerse Type: %T\n", currentVerse)
 
-	// Info for usage
+	// Print info for usage for user 1 time at beginning
 	fmt.Print("\nPress 'n' for next verse, 'p' for prev, 'r' for random, or 'q' to quit: \n\n")
 
 	// This is the main loop of interactive mode. Prints out the verse based on the id number
 	for {
+		fmt.Printf("\n")
 		var bibleVerse Bible
 		err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible WHERE id = ?", id).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
 		if err != nil {
@@ -205,7 +193,9 @@ func interactiveMode(db *sql.DB) {
 		}
 
 		// This actually prints the verse
-		fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
+		fmt.Printf("%s %d:%d\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse)
+		wordWrap(bibleVerse.Text)
+		
 
 		// Prompt for next command
 		reader2 := bufio.NewReader(os.Stdin)
@@ -223,8 +213,11 @@ func interactiveMode(db *sql.DB) {
 		inputSplit := strings.Split(userInput, " ")
 
 
+		// If length of inputSplit is 3 it should mean the user has input book chapter verse (ie James 2 24)
+		// Which means it should jump to that verse
 		if len(inputSplit) == 3 {
 			id = getIdOfVerse(db, inputSplit[0], inputSplit[1], inputSplit[2])
+		// If length of inputSplit is 1, it is probably just a command 
 		} else if len(inputSplit) == 1 {
 			switch strings.ToLower(inputSplit[0]) {
 			// Go to next verse
@@ -244,7 +237,9 @@ func interactiveMode(db *sql.DB) {
 				id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
 			// quit :p
 			case "q":
-				fmt.Println("Exiting interactive mode.")
+				//fmt.Println("Exiting interactive mode.")
+				return
+			case "x":
 				return
 			default:
 				fmt.Println("Invalid input. Please enter 'n', 'p', 'r' or 'q'.")
@@ -271,23 +266,32 @@ func infoMode(db *sql.DB) {
 		}
 	}
 
-	// If just a book is provided
+	// If just a book is provided, print Number of chapters
 	if len(os.Args) == 3 {
 		var args Args
 		args.BookName = os.Args[2]
 
 		chapters := getAllChaptersInBook(db, args.BookName)
-		fmt.Printf("Chapters in %s: %d\n", args.BookName, len(chapters))
+		fmt.Printf("Chapters in %s: %d\n", args.BookName, chapters)
 	}
 
-	// if a book and a chapter
+	// if a book and a chapter, print number of verses
 	if len(os.Args) == 4 {
 		var args Args
 		args.BookName = os.Args[2]
 		args.Chapters = os.Args[3]
 		verses := getAllVersesInChapter(db, args.BookName, args.Chapters)
-		fmt.Printf("Verses in %s %s: %d\n", args.BookName, args.Chapters, len(verses))
+		fmt.Printf("Verses in %s %s: %d\n", args.BookName, args.Chapters, verses)
 	}
+}
+
+
+// Fucntion to print a random verse. use -r on command line
+func printRandomVerse(db *sql.DB) {
+	// Get random verse
+	random := randomVerse(db)
+	// Print random verse
+	printVerse(db, random[0], random[1], random[2])
 }
 
 
@@ -302,19 +306,23 @@ func randomVerse(db *sql.DB) []string {
 	chapters := getAllChaptersInBook(db, randomBook)
 
 	// Get random chapter
-	randomChapter := chapters[rand.Intn(len(chapters))]
+	// i think this needs the +1 to not try to pick chapter "0". needs to be 1-chapters It might be a bug?
+	randomChapter := rand.Intn(chapters) + 1
 
 	// Get number of verses in chapter
 	verses := getAllVersesInChapter(db, randomBook, strconv.Itoa(randomChapter))
 
 	// Get random verse
-	randomVerse := verses[rand.Intn(len(verses))]
+	// I think this needs the plus 1 to not try to get verse "0". it might be a bug?
+	randomVerse := rand.Intn(verses) + 1
 
 	return []string{randomBook, strconv.Itoa(randomChapter), strconv.Itoa(randomVerse)}
 }
 
 
 // Print Verse
+// these are a string for a reason...I think beause random verse needs to return a []string, so it made it easier to do? because the bookname is a string,
+// And I wanted it to return a single array
 func printVerse(db *sql.DB, book string, chapter string, verse string) {
 	
 	chapterInt, _ := strconv.Atoi(chapter)
@@ -325,16 +333,9 @@ func printVerse(db *sql.DB, book string, chapter string, verse string) {
 	if err != nil {
 		fmt.Printf("Verse %s %s:%s not found\n", book, chapter, verse)
 	}
-	fmt.Printf("%s %s %s:\n%s\n", book, chapter, verse, bibleVerse.Text)
-}
-
-
-// Fucntion to print a random verse. use -r on command line
-func printRandomVerse(db *sql.DB) {
-	// Get random verse
-	random := randomVerse(db)
-	// Print random verse
-	printVerse(db, random[0], random[1], random[2])
+	fmt.Printf("%s %s:%s\n", book, chapter, verse)
+	wordWrap(bibleVerse.Text)
+	fmt.Printf("\n")
 }
 
 
@@ -363,7 +364,9 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 				os.Exit(1)
 			}
 
-			fmt.Printf("%s %d %d: %s\n", bible.BookName, bible.Chapter, bible.Verse, bible.Text)
+			fmt.Printf("%s %d:%d\n", bible.BookName, bible.Chapter, bible.Verse)
+			wordWrap(bible.Text)
+			fmt.Printf("\n")
 
 			if !rows.Next() {
 				break
@@ -394,7 +397,9 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 				os.Exit(1)
 			}
 
-			fmt.Printf("%s %d %d: %s\n", bible.BookName, bible.Chapter, bible.Verse, bible.Text)
+			fmt.Printf("%s %d:%d\n", bible.BookName, bible.Chapter, bible.Verse)
+			wordWrap(bible.Text)
+			fmt.Printf("\n")
 
 			if !rows.Next() {
 				break
@@ -404,9 +409,10 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 }
 
 
+// This runs if no "flags" are provided, but there may be arguments. 
 func singleShotMode(db *sql.DB) {
 
-	// Print all books
+	// if no argurments provided, print all books
 	if len(os.Args) == 1 {
 		for i := 0; i < len(allBooks); i++ {
 			// This is just for formatting. No comma and newline on last one
@@ -419,30 +425,23 @@ func singleShotMode(db *sql.DB) {
 		os.Exit(0)
 	}
 
-
 	var args Args
 	args.BookName = os.Args[1]
 
-	// If just a book is provided
+	// If just a book is provided, Print number of chapters.
 	if len(os.Args) == 2 {
 		chapters := getAllChaptersInBook(db, args.BookName)
-		fmt.Printf("Chapters in %s:\n", args.BookName)
-		for i, num := range chapters {
-			if i > 0 {
-				fmt.Print(" ") // Print a space before each number except the first
-			}
-			fmt.Print(num)
-		}
+		fmt.Printf("Chapters in %s: %d\n", args.BookName, chapters)
 		fmt.Println()
 	}
 
-	// if a book and a chapter
+	// if a book and a chapter, print the entire chapter
 	if len(os.Args) == 3 {
 		args.Chapters = os.Args[2]
 		printChapters(db, args)
 	}
 
-	// if book and chapter and verse(s)
+	// if book and chapter and verse(s), print the verse(s)
 	if len(os.Args) == 4 {
 		args.Chapters = os.Args[2]
 		args.Verses = os.Args[3]
@@ -452,6 +451,7 @@ func singleShotMode(db *sql.DB) {
 
 
 // This function runs if you provide only a book
+// I don't really want to use this. I don't want to print entire books...
 func printBook() {
 
 }
@@ -466,30 +466,25 @@ func printChapters(db *sql.DB, args Args) {
 			fmt.Println("Error getting all chapters: ", err)
 		}
 
+		// For every chapter
 		for i := 0 ; i < len(chapters); i++{
 			fmt.Println("Chapter ", chapters[i])
-			// We need to get all the verses for the chapter
+			// We need to get the number of verses for the chapter
 			verses := getAllVersesInChapter(db, args.BookName, strconv.Itoa(chapters[i]))
-			var bibleVerse Bible
-			for j := 0; j < len(verses); j++ {
-				err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", args.BookName, chapters[i], verses[j]).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
-				if err != nil {
-					fmt.Printf("Verse %s %d:%d not found\n", args.BookName, args.Chapters, verses[j])
-				}
-				fmt.Printf("%d: %s\n", verses[j], bibleVerse.Text)
+
+			// For every verse
+			for j := 1; j <= verses; j++ {
+				printVerse(db, args.BookName, strconv.Itoa(chapters[i]), strconv.Itoa(j))
 			}
 		}
+
 	// This is for a single chapter ie "bible "1 Corinthians" 1"
 	} else {
-	verses := getAllVersesInChapter(db, args.BookName, args.Chapters)
-	fmt.Println(verses)
-	var bibleVerse Bible
-		for i := 0; i < len(verses); i++ {
-			err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", args.BookName, args.Chapters, verses[i]).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
-			if err != nil {
-				fmt.Printf("Verse %s %d:%d not found\n", args.BookName, args.Chapters, verses[i])
-			}
-			fmt.Printf("%d: %s\n", verses[i], bibleVerse.Text)
+
+		verses := getAllVersesInChapter(db, args.BookName, args.Chapters)
+
+		for i := 1; i <= verses; i++ {
+			printVerse(db, args.BookName, args.Chapters, strconv.Itoa(i))
 		}
 	}
 }
@@ -503,22 +498,12 @@ func printVerses(db *sql.DB, args Args) {
 		if err != nil {
 			fmt.Println("Error gettings all verses: ", err)
 		}
-		var bibleVerse Bible
 		for i := 0; i < len(verses); i ++ {
-			err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", args.BookName, args.Chapters, verses[i]).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
-			if err != nil {
-				fmt.Printf("Verse %s %d:%d not found\n", args.BookName, args.Chapters, verses[i])
-			}
-			fmt.Printf("%d: %s\n", verses[i], bibleVerse.Text)
+			printVerse(db, args.BookName, args.Chapters, strconv.Itoa(verses[i]))
 		}
 	// This is for a single verse
 	} else {
-		var bibleVerse Bible
-		err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", args.BookName, args.Chapters, args.Verses).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
-		if err != nil {
-			fmt.Printf("Verse %s %d:%d not found\n", args.BookName, args.Chapters, args.Verses)
-		}
-		fmt.Printf("%s\n", bibleVerse.Text)
+		printVerse(db, args.BookName, args.Chapters, args.Verses)
 	}
 }
 
@@ -537,8 +522,8 @@ func getIdOfVerse(db *sql.DB, bookName string, chapter string, verse string) int
 }
 
 
-// This gives all chapters in a book
-func getAllChaptersInBook(db *sql.DB, bookName string) []int {
+// This gives number of chapters in a book
+func getAllChaptersInBook(db *sql.DB, bookName string) int {
 	query := "SELECT chapter FROM bible WHERE bookName = ?"
 	rows, err := db.Query(query, bookName)
 	if err != nil {
@@ -562,11 +547,11 @@ func getAllChaptersInBook(db *sql.DB, bookName string) []int {
 		}
 		
 	}
-	return uniqueChapters
+	return len(uniqueChapters)
 }
 
 // This gives the number of verses in a chapter
-func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) []int {
+func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) int {
     var verses []int
     query := "SELECT verse FROM bible WHERE bookName = ? AND chapter = ?"
     rows, err := db.Query(query, bookName, chapter)
@@ -582,12 +567,16 @@ func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) []int {
         }
         verses = append(verses, verse)
     }
-    return verses
+    return len(verses)
 }
 
+
+// What is this? I don't use it...
+// REMOVE
 func printAllVerses(db *sql.DB, bookName string, chapter int, verse int) {
 	fmt.Println("printAllVerses func")
 }
+
 
 // getIntsStartAndEnd parses a string in the format "start-end" and returns a slice of integers.
 func getIntsStartAndEnd(s string) ([]int, error) {
@@ -616,6 +605,8 @@ func getIntsStartAndEnd(s string) ([]int, error) {
 }
 
 
+// it doesn't appear I ever use this?
+// REMOVE
 func parseVerseInput(input string) []int {
     var verses []int
     if strings.Contains(input, "-") {
@@ -632,13 +623,67 @@ func parseVerseInput(input string) []int {
     return verses
 }
 
+
+// This doesn't even work...
 func clearConsole() {
-    cmd := exec.Command("clear") // For Unix/Linux
-    if err := cmd.Run(); err != nil {
-        // If clearing fails, try for Windows
-        cmd = exec.Command("cmd", "/c", "cls")
-        if err := cmd.Run(); err != nil {
-            fmt.Println("Unable to clear console:", err)
-        }
-    }
+	cmd := exec.Command("clear") // For Unix/Linux
+	if err := cmd.Run(); err != nil {
+		// If clearing fails, try for Windows
+		cmd = exec.Command("cmd", "/c", "cls")
+		if err := cmd.Run(); err != nil {
+			fmt.Println("Unable to clear console:", err)
+		}
+	}
+}
+
+
+// This Returns the width of the terminal (used for wordwrap)
+func termWidth() int {
+	termWidth, _, err := term.GetSize(0)
+  if err != nil {
+		fmt.Println("Error geting terminal width: ", err)
+    os.Exit(1)
+  }
+
+	return termWidth
+}
+
+
+// Wraps the text so that it doesn't split a word in the middle
+func wordWrap(str string) {
+	lineWidth := termWidth()
+	//words := strings.Fields(strings.TrimSpace(text))
+	words := strings.Fields(str)
+	if len(words) == 0 {
+		fmt.Println(str)
+	}
+	wrapped := words[0]
+	spaceLeft := lineWidth - len(wrapped)
+	for _, word := range words[1:] {
+		if len(word)+1 > spaceLeft {
+			wrapped += "\n" + word
+			spaceLeft = lineWidth - len(word)
+		} else {
+			wrapped += " " + word
+			spaceLeft -= 1 + len(word)
+		}
+	}
+	fmt.Println(wrapped)
+}
+
+
+// This is just for testing random things...
+func testFunction(db *sql.DB) {
+	var book string
+	var chapter string
+	var verse string
+	fmt.Println("Book: ")
+	fmt.Scan(&book)
+	fmt.Println("Chatper: ")
+	fmt.Scan(&chapter)
+	fmt.Println("Verse: ")
+	fmt.Scan(&verse)
+
+	id := getIdOfVerse(db, book, chapter, verse)
+	fmt.Printf("ID: %d\n", id)
 }
