@@ -208,32 +208,47 @@ func interactiveMode(db *sql.DB) {
 		fmt.Printf("%s %d:%d - %s\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse, bibleVerse.Text)
 
 		// Prompt for next command
+		reader2 := bufio.NewReader(os.Stdin)
 		fmt.Print(": ")
-		var input string
-		fmt.Scan(&input)
-
-		switch strings.ToLower(input) {
-		// Go to next verse
-		case "n":
-			id++
-		// Go to prev verse
-		case "p":
-			if id > 1 {
-				id--
-			} else {
-				fmt.Println("You are at the first verse.")
-			}
-		//Get a random verse
-		case "r":
-			rVerse := randomVerse(db)
-			//Get id of random verse
-			id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
-		// quit :p
-		case "q":
-			fmt.Println("Exiting interactive mode.")
+		input, err := reader2.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input:", err)
 			return
-		default:
-			fmt.Println("Invalid input. Please enter 'n', 'p', 'r' or 'q'.")
+		}
+
+		// Clean the white space (including the newline character)
+		userInput := strings.TrimSpace(input)
+
+		// Split the user input into its parts (should be book chapter verse or 'r' for random
+		inputSplit := strings.Split(userInput, " ")
+
+
+		if len(inputSplit) == 3 {
+			id = getIdOfVerse(db, inputSplit[0], inputSplit[1], inputSplit[2])
+		} else if len(inputSplit) == 1 {
+			switch strings.ToLower(inputSplit[0]) {
+			// Go to next verse
+			case "n":
+				id++
+			// Go to prev verse
+			case "p":
+				if id > 1 {
+					id--
+				} else {
+					fmt.Println("You are at the first verse.")
+				}
+			//Get a random verse
+			case "r":
+				rVerse := randomVerse(db)
+				//Get id of random verse
+				id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
+			// quit :p
+			case "q":
+				fmt.Println("Exiting interactive mode.")
+				return
+			default:
+				fmt.Println("Invalid input. Please enter 'n', 'p', 'r' or 'q'.")
+			}
 		}
 
 		// Clear the console for better readability
