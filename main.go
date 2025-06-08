@@ -65,7 +65,7 @@ var embeddedDb []byte
 // The main function :p (The more comments the better!)
 func main() {
 	// Version number
-	version := "v0.1.0"
+	version := "v0.1.1"
 
 	// Create a temporary file to hold the embedded database
 	tmpFile, err := os.CreateTemp("", "kjv.db")
@@ -146,19 +146,29 @@ func interactiveMode(db *sql.DB) {
 
 		// Check if it was 'r' for random, and if so, get id of random verse to start at
 		if len(bookChapterVerseSplit) == 1 && bookChapterVerseSplit[0] == "r" {
-			rVerse := randomVerse(db)
-			id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
-			break
+                  rVerse := randomVerse(db)
+                  id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
+                  break
 		// If any other single character, prompt proper usage
 		} else if len(bookChapterVerseSplit) == 1 {
-			fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
+                  fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
 		// If Specific book chapter verse to start at, get the id
 		} else {
-			bookName = bookChapterVerseSplit[0]
-			chapter = bookChapterVerseSplit[1]
-			verse = bookChapterVerseSplit[2]
-			id = getIdOfVerse(db, bookName, chapter, verse)
-			break
+                  // Detect if it is a numbered book ("1 John" etc)
+                  if bookChapterVerseSplit[0][0] == '"' {
+                    bookName = strings.Trim(bookChapterVerseSplit[0] + " " + bookChapterVerseSplit[1], "\"")
+                    chapter = bookChapterVerseSplit[2]
+                    verse = bookChapterVerseSplit[3]
+                    id = getIdOfVerse(db, bookName, chapter, verse)
+                    break
+                  // If not a numbered book, get the verse
+                  } else {
+                    bookName = bookChapterVerseSplit[0]
+                    chapter = bookChapterVerseSplit[1]
+                    verse = bookChapterVerseSplit[2]
+                    id = getIdOfVerse(db, bookName, chapter, verse)
+                    break
+                  }
 		}
 	}
 
