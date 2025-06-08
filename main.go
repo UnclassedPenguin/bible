@@ -233,6 +233,19 @@ func interactiveMode(db *sql.DB) {
 		// Which means it should jump to that verse
 		if len(inputSplit) == 3 {
 			id = getIdOfVerse(db, inputSplit[0], inputSplit[1], inputSplit[2])
+                // If length of inputSplit == 4 it means it is a numbered book, ie "1 John" 1 1
+                } else if len(inputSplit) == 4 {
+                  if inputSplit[0][0] == '"' {
+                    bookName = strings.Trim(inputSplit[0] + " " + inputSplit[1], "\"")
+                    chapter = inputSplit[2]
+                    verse = inputSplit[3]
+                    id = getIdOfVerse(db, bookName, chapter, verse)
+                  } else if  inputSplit[0][0] == '\'' {
+                    bookName = strings.Trim(inputSplit[0] + " " + inputSplit[1], "'")
+                    chapter = inputSplit[2]
+                    verse = inputSplit[3]
+                    id = getIdOfVerse(db, bookName, chapter, verse)
+                  }
 		// If length of inputSplit is 1, it is probably just a command 
 		} else if len(inputSplit) == 1 {
 			switch strings.ToLower(inputSplit[0]) {
