@@ -650,7 +650,7 @@ func termWidth() int {
 		fmt.Println("Error geting terminal width: ", err)
 		return 0
   }
-	return termWidth
+	return termWidth - 1
 }
 
 
