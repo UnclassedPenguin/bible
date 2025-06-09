@@ -65,7 +65,7 @@ var embeddedDb []byte
 // The main function :p (The more comments the better!)
 func main() {
 	// Version number
-	version := "v0.1.2"
+	version := "v0.1.3"
 
 	// Create a temporary file to hold the embedded database
 	tmpFile, err := os.CreateTemp("", "kjv.db")
@@ -102,20 +102,21 @@ func main() {
 	defer db.Close()
 
 	// These are all the different "modes"
-	if *interactive {
-		interactiveMode(db)
-	} else if *listMode {
-		infoMode(db)
-	} else if *versionMode {
-		fmt.Println(version)
-	} else if *randomMode {
-		printRandomVerse(db)
-	} else if *searchMode {
-		searchForTerm(db, *exactMode)
-	} else if *testMode {
-		testFunction(db)
-	} else {
-		singleShotMode(db)
+	switch {
+	case *interactive:
+			interactiveMode(db)
+	case *listMode:
+			infoMode(db)
+	case *versionMode:
+			fmt.Println(version)
+	case *randomMode:
+			printRandomVerse(db)
+	case *searchMode:
+			searchForTerm(db, *exactMode)
+	case *testMode:
+			testFunction(db)
+	default:
+			singleShotMode(db)
 	}
 }
 
@@ -126,74 +127,26 @@ func interactiveMode(db *sql.DB) {
 	var chapter string
 	var verse string
 	var id int
-	
+
 	// Loop to get initial input from user. 
 	for {
 		// Get user input 
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Enter Book Chapter Verse(ie Genesis 1 1): ")
-		bookChapterVerse, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading input:", err)
-			return
-		}
-
-		// Clean the white space (including the newline character)
-		userInput := strings.TrimSpace(bookChapterVerse)
-
-		// Split the user input into its parts (should be book chapter verse or 'r' for random
-		bookChapterVerseSplit := strings.Split(userInput, " ")
+		userInputSplit := getUserInput("Enter Book Chapter Name(ie Genesis 1 1): ")
 
 		// Check if it was 'r' for random, and if so, get id of random verse to start at
-		if len(bookChapterVerseSplit) == 1 && bookChapterVerseSplit[0] == "r" {
-                  rVerse := randomVerse(db)
-                  id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
-                  break
+		if len(userInputSplit) == 1 && userInputSplit[0] == "r" {
+			rVerse := randomVerse(db)
+			id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
+			break
 		// If any other single character, prompt proper usage
-		} else if len(bookChapterVerseSplit) == 1 {
-                  fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
+		} else if len(userInputSplit) == 1 {
+			fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
 		// If Specific book chapter verse to start at, get the id
 		} else {
-                  // Detect if it is a numbered book ("1 John" etc)
-                  if bookChapterVerseSplit[0][0] == '"' {
-                    bookName = strings.Trim(bookChapterVerseSplit[0] + " " + bookChapterVerseSplit[1], "\"")
-                    chapter = bookChapterVerseSplit[2]
-                    verse = bookChapterVerseSplit[3]
-                    id = getIdOfVerse(db, bookName, chapter, verse)
-                    break
-                  } else if  bookChapterVerseSplit[0][0] == '\'' {
-                    bookName = strings.Trim(bookChapterVerseSplit[0] + " " + bookChapterVerseSplit[1], "'")
-                    chapter = bookChapterVerseSplit[2]
-                    verse = bookChapterVerseSplit[3]
-                    id = getIdOfVerse(db, bookName, chapter, verse)
-                    break
-                  // If not a numbered book, get the verse
-                  } else {
-                    bookName = bookChapterVerseSplit[0]
-                    chapter = bookChapterVerseSplit[1]
-                    verse = bookChapterVerseSplit[2]
-                    id = getIdOfVerse(db, bookName, chapter, verse)
-                    break
-                  }
+			id = parseInteractiveCommand(db, userInputSplit)
+			break
 		}
 	}
-
-	// Diagnostics
-	//fmt.Println("split: ", bookChapterVerseSplit)
-	//fmt.Printf("split type: %T\n", bookChapterVerseSplit)
-	//fmt.Println("split length: ", len(bookChapterVerseSplit))
-
-	//fmt.Println("bookName: ", bookName)
-	//fmt.Printf("bookName Type: %T\n", bookName)
-	
-	//fmt.Println("chapter: ", chapter)
-	//fmt.Printf("chapter Type: %T\n", chapter)
-
-	//fmt.Println("startVerse: ", startVerse)
-	//fmt.Printf("startVerse Type: %T\n", startVerse)
-
-	//fmt.Println("currentVerse: ", currentVerse)
-	//fmt.Printf("currentVerse Type: %T\n", currentVerse)
 
 	// Print info for usage for user 1 time at beginning
 	fmt.Print("\nPress 'n' for next verse, 'p' for prev, 'r' for random, or 'q' to quit: \n\n")
@@ -212,72 +165,96 @@ func interactiveMode(db *sql.DB) {
 		fmt.Printf("%s %d:%d\n", bibleVerse.BookName, bibleVerse.Chapter, bibleVerse.Verse)
 		wordWrap(bibleVerse.Text)
 		
-
 		// Prompt for next command
-		reader2 := bufio.NewReader(os.Stdin)
-		fmt.Print(": ")
-		input, err := reader2.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading input:", err)
-			return
-		}
+		inputSplit := getUserInput(": ")
 
-		// Clean the white space (including the newline character)
-		userInput := strings.TrimSpace(input)
-
-		// Split the user input into its parts (should be book chapter verse or 'r' for random
-		inputSplit := strings.Split(userInput, " ")
-
-
-		// If length of inputSplit is 3 it should mean the user has input book chapter verse (ie James 2 24)
-		// Which means it should jump to that verse
-		if len(inputSplit) == 3 {
-			id = getIdOfVerse(db, inputSplit[0], inputSplit[1], inputSplit[2])
-                // If length of inputSplit == 4 it means it is a numbered book, ie "1 John" 1 1
-                } else if len(inputSplit) == 4 {
-                  if inputSplit[0][0] == '"' {
-                    bookName = strings.Trim(inputSplit[0] + " " + inputSplit[1], "\"")
-                    chapter = inputSplit[2]
-                    verse = inputSplit[3]
-                    id = getIdOfVerse(db, bookName, chapter, verse)
-                  } else if  inputSplit[0][0] == '\'' {
-                    bookName = strings.Trim(inputSplit[0] + " " + inputSplit[1], "'")
-                    chapter = inputSplit[2]
-                    verse = inputSplit[3]
-                    id = getIdOfVerse(db, bookName, chapter, verse)
-                  }
-		// If length of inputSplit is 1, it is probably just a command 
-		} else if len(inputSplit) == 1 {
+		if len(inputSplit) == 1 {
 			switch strings.ToLower(inputSplit[0]) {
-			// Go to next verse
-			case "n":
-				id++
-			// Go to prev verse
-			case "p":
+			case "n": // Go to next verse
+					id++
+			case "p": // Go to prev verse
 				if id > 1 {
 					id--
 				} else {
 					fmt.Println("You are at the first verse.")
 				}
-			//Get a random verse
-			case "r":
+			case "r": // Get a random verse
 				rVerse := randomVerse(db)
 				//Get id of random verse
 				id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
-			// quit :p
-			case "q":
-				//fmt.Println("Exiting interactive mode.")
+			case "q": // quit :p
 				return
 			case "x":
 				return
 			default:
 				fmt.Println("Invalid input. Please enter 'n', 'p', 'r' or 'q'.")
 			}
+		} else {
+			id = parseInteractiveCommand(db, inputSplit)
 		}
 
+
 		// Clear the console for better readability
-		clearConsole()
+		// This doesn't even work so I'm going to comment it out for now
+		//clearConsole()
 	}
+}
+
+
+// Function to ask the user for input in interactive mode
+func getUserInput(prompt string) []string {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print(prompt)
+		bookChapterVerse, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input:", err)
+			return []string{}
+		}
+
+		// Clean the white space (including the newline character)
+		userInput := strings.TrimSpace(bookChapterVerse)
+
+		return strings.Split(userInput, " ")
+}
+
+
+//  Takes the command from interactive mode (if it is more than a single character), returns the id of the verse to go to
+func parseInteractiveCommand(db *sql.DB, split []string) int {
+	var bookName string
+	var chapter string
+	var verse string
+	var id int
+
+	// This is a special case for "Song of Solomon", which is the only 3 word book
+	if (split[0][0] == '"' || split[0][0] == '\'') && split[0] == "\"Song" {
+		bookName = strings.Trim(split[0] + " " + split[1] + " " + split[2], "\"")
+		chapter = split[3]
+		verse = split[4]
+		id = getIdOfVerse(db, bookName, chapter, verse)
+		return id
+	// Detect if it is a numbered book ("1 John" etc)
+	} else if split[0][0] == '"' {
+		bookName = strings.Trim(split[0] + " " + split[1], "\"")
+		chapter = split[2]
+		verse = split[3]
+		id = getIdOfVerse(db, bookName, chapter, verse)
+		return id
+	// This is just to catch if the user uses single quotes instead of double
+	} else if  split[0][0] == '\'' {
+		bookName = strings.Trim(split[0] + " " + split[1], "'")
+		chapter = split[2]
+		verse = split[3]
+		id = getIdOfVerse(db, bookName, chapter, verse)
+		return id
+	// If not a numbered book, get the verse
+	} else {
+		bookName = split[0]
+		chapter = split[1]
+		verse = split[2]
+		id = getIdOfVerse(db, bookName, chapter, verse)
+		return id
+	}
+	return -1
 }
 
 
@@ -376,13 +353,13 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 		rows, err := db.Query(query, "% "+os.Args[3]+" %")
 		if err != nil {
 			fmt.Println("Error in query of exact search: ", err)
-			os.Exit(1)
+			return
 		}
     defer rows.Close()
 
 		if !rows.Next() {
 			fmt.Println("No search found matching: ", os.Args[3])
-			os.Exit(0)
+			return
 		}
 
 		for {
@@ -390,7 +367,7 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
 			if err != nil {
 				fmt.Println("Error reading row(exact search): ", err)
-				os.Exit(1)
+				return
 			}
 
 			fmt.Printf("%s %d:%d\n", bible.BookName, bible.Chapter, bible.Verse)
@@ -409,13 +386,13 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 		rows, err := db.Query(query, "%"+os.Args[2]+"%")
 		if err != nil {
 			fmt.Println("Error in query of search: ", err)
-			os.Exit(1)
+			return
 		}
     defer rows.Close()
 
 		if !rows.Next() {
 			fmt.Println("No search found matching: ", os.Args[2])
-			os.Exit(0)
+			return
 		}
 
 		for {
@@ -423,7 +400,7 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 			err = rows.Scan(&bible.BookName, &bible.Chapter, &bible.Verse, &bible.Text)
 			if err != nil {
 				fmt.Println("Error reading row(search): ", err)
-				os.Exit(1)
+				return
 			}
 
 			fmt.Printf("%s %d:%d\n", bible.BookName, bible.Chapter, bible.Verse)
@@ -451,7 +428,7 @@ func singleShotMode(db *sql.DB) {
 				fmt.Printf("%s, ", allBooks[i])
 			}
 		}
-		os.Exit(0)
+		return
 	}
 
 	var args Args
@@ -671,9 +648,8 @@ func termWidth() int {
 	termWidth, _, err := term.GetSize(0)
   if err != nil {
 		fmt.Println("Error geting terminal width: ", err)
-    os.Exit(1)
+		return 0
   }
-
 	return termWidth
 }
 
