@@ -4,8 +4,8 @@
 [ ] - Add a print all?  
 
 ## Finished:
-[x] - Add a way to list all books  
-[x] - Add a random verse function  
+ - [x] Add a way to list all books  
+ - [x] Add a random verse function  
 [x] - Add search function. Search for a word, give all verses with it in it  
 [x] - randomVerse should be a function that returns [string, string, string] ie [bookName, chapter, verse]  
 [x] - Add random function to interactive mode  
