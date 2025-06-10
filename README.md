@@ -1,4 +1,5 @@
 ## Todo:  
+[ ] - Combine if statements in infoMode function. Should be if else if
 [ ] - Add bookmark function  
 [ ] - Add favorite function  
 [ ] - Add a print all?  
