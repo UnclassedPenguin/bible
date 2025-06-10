@@ -1,4 +1,5 @@
 ## Todo:  
+- [ ] Need to fix in interactive mode what happens when you enter a verse that doesnt exist
 - [ ] Add bookmark function  
 - [ ] Add favorite function  
 - [ ] Add a print all?  
