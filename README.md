@@ -1,6 +1,7 @@
 ## Todo:  
 [ ] - I think maybe i could change passage struct to have chapter and verse as int. it m8ght clean up soke code where i dont have to conbert back and forth? could change printVerse function
 [ ] - Combine if statements in infoMode function. Should be if else if
+[ ] - Combine if statements in singleShotMode function. Should be if else if
 [ ] - Add bookmark function  
 [ ] - Add favorite function  
 [ ] - Add a print all?  
