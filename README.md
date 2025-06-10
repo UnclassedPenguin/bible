@@ -1,7 +1,5 @@
 ## Todo:  
-[ ] - I think maybe i could change passage struct to have chapter and verse as int. it m8ght clean up soke code where i dont have to conbert back and forth? could change printVerse function
-[ ] - Combine if statements in infoMode function. Should be if else if
-[ ] - Combine if statements in singleShotMode function. Should be if else if
+[ ] - I think maybe i could change passage struct to have chapter and verse as int. It might clean up some code where I dont have to convert back and forth? Could change printVerse function
 [ ] - Add bookmark function  
 [ ] - Add favorite function  
 [ ] - Add a print all?  
@@ -20,3 +18,5 @@
 [x] - Clean up interactive mode, make it not so ugly  
    [x] - Interactive should be able to basically have a command line, sort of like vim. That at anytime you can do a book or a chapter or a verse  
 [x] - Add a print function that wraps the print, so It doesn't split words  
+[x] - Combine if statements in infoMode function. Should be if else if
+[x] - Combine if statements in singleShotMode function. Should be if else if

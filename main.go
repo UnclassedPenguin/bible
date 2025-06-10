@@ -273,19 +273,17 @@ func infoMode(db *sql.DB) {
 				fmt.Printf("%s, ", allBooks[i])
 			}
 		}
-	}
-
+	
 	// If just a book is provided, print Number of chapters
-	if len(os.Args) == 3 {
+	} else if len(os.Args) == 3 {
 		var passage Passage
 		passage.BookName = os.Args[2]
 
 		chapters := getAllChaptersInBook(db, passage.BookName)
 		fmt.Printf("Chapters in %s: %d\n", passage.BookName, chapters)
-	}
 
 	// if a book and a chapter, print number of verses
-	if len(os.Args) == 4 {
+	} else if len(os.Args) == 4 {
 		var passage Passage 
 		passage.BookName = os.Args[2]
 		passage.Chapter = os.Args[3]
@@ -445,16 +443,14 @@ func singleShotMode(db *sql.DB) {
 		chapters := getAllChaptersInBook(db, passage.BookName)
 		fmt.Printf("Chapters in %s: %d\n", passage.BookName, chapters)
 		fmt.Println()
-	}
 
 	// if a book and a chapter, print the entire chapter
-	if len(os.Args) == 3 {
+	} else if len(os.Args) == 3 {
 		passage.Chapter = os.Args[2]
 		printChapters(db, passage)
-	}
 
 	// if book and chapter and verse(s), print the verse(s)
-	if len(os.Args) == 4 {
+	} else if len(os.Args) == 4 {
 		passage.Chapter = os.Args[2]
 		passage.Verse = os.Args[3]
 		printVerses(db, passage)
@@ -480,7 +476,7 @@ func printChapters(db *sql.DB, passage Passage) {
 
 		// For every chapter
 		for i := 0 ; i < len(chapters); i++{
-			fmt.Printf("Chapter %d\n\n", chapters[i])
+			fmt.Printf("%s Chapter %d\n\n", passage.BookName, chapters[i])
 			// We need to get the number of verses for the chapter
 			verses := getAllVersesInChapter(db, passage.BookName, strconv.Itoa(chapters[i]))
 
