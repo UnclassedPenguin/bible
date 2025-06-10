@@ -1,42 +1,42 @@
 //------------------------------------------------------------------------------
 // Bible program
 // Written by UnclassedPenguin
-// https://github.com/unclassedpenguin
+// https://github.com/unclassedpenguin/bible.git
 //------------------------------------------------------------------------------
 
 package main
 
 import (
-	"bufio"
-	"database/sql"
-	"flag"
+	"os"
 	"fmt"
 	"log"
-	"os"
+	"flag"
+	"time"
+	"bufio"
+	_ "embed"
 	"os/exec"
 	"strconv"
 	"strings"
 	"math/rand"
-	"time"
+	"database/sql"
 	"golang.org/x/term"
-	_ "embed"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // This struct is to reference the sql database
 type Bible struct {
-	ID       int
-	BookName string
-	Book		 int
-	Chapter  int
-	Verse    int
-	Text     string
+	ID       	int
+	BookName	string
+	Book		int
+	Chapter  	int
+	Verse    	int
+	Text     	string
 }
 
 // This struct is to hold the command line argurments
 type Args struct {
 	BookName	string
-	Chapters  string
+	Chapters  	string
 	Verses		string
 }
 
@@ -70,23 +70,21 @@ func main() {
 	// Create a temporary file to hold the embedded database
 	tmpFile, err := os.CreateTemp("", "kjv.db")
 	if err != nil {
-			log.Fatal(err)
+		log.Fatal(err)
 	}
 	defer os.Remove(tmpFile.Name()) // Clean up the temp file afterwards
 
 	// Write the embedded database to the temporary file
 	if _, err := tmpFile.Write(embeddedDb); err != nil {
-			log.Fatal(err)
+		log.Fatal(err)
 	}
 	if err := tmpFile.Close(); err != nil {
-			log.Fatal(err)
+		log.Fatal(err)
 	}
 
-	// Define the -i flag for interactive mode
+	// Command line flags
 	interactive := flag.Bool("i", false, "Enable interactive mode")
-	// Define -l flag for the list mode
 	listMode := flag.Bool("l", false, "List Info")
-	// Define -v flag for the version mode
 	versionMode := flag.Bool("v", false, "Print Version")
 	randomMode := flag.Bool("r", false, "Print random verse")
 	searchMode := flag.Bool("s", false, "search for term")
@@ -94,29 +92,28 @@ func main() {
 	testMode := flag.Bool("t", false, "Test function, for testing.")
 	flag.Parse()
 
-	//db, err := sql.Open("sqlite3", "./kjv.db")
 	db, err := sql.Open("sqlite3", tmpFile.Name())
 	if err != nil {
-			log.Fatal(err)
+		log.Fatal(err)
 	}
 	defer db.Close()
 
 	// These are all the different "modes"
 	switch {
 	case *interactive:
-			interactiveMode(db)
+		interactiveMode(db)
 	case *listMode:
-			infoMode(db)
+		infoMode(db)
 	case *versionMode:
-			fmt.Println(version)
+		fmt.Println(version)
 	case *randomMode:
-			printRandomVerse(db)
+		printRandomVerse(db)
 	case *searchMode:
-			searchForTerm(db, *exactMode)
+		searchForTerm(db, *exactMode)
 	case *testMode:
-			testFunction(db)
+		testFunction(db)
 	default:
-			singleShotMode(db)
+		singleShotMode(db)
 	}
 }
 
@@ -193,7 +190,6 @@ func interactiveMode(db *sql.DB) {
 			id = parseInteractiveCommand(db, inputSplit)
 		}
 
-
 		// Clear the console for better readability
 		// This doesn't even work so I'm going to comment it out for now
 		//clearConsole()
@@ -203,18 +199,18 @@ func interactiveMode(db *sql.DB) {
 
 // Function to ask the user for input in interactive mode
 func getUserInput(prompt string) []string {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print(prompt)
-		bookChapterVerse, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading input:", err)
-			return []string{}
-		}
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print(prompt)
+	bookChapterVerse, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading input:", err)
+		return []string{}
+	}
 
-		// Clean the white space (including the newline character)
-		userInput := strings.TrimSpace(bookChapterVerse)
+	// Clean the white space (including the newline character)
+	userInput := strings.TrimSpace(bookChapterVerse)
 
-		return strings.Split(userInput, " ")
+	return strings.Split(userInput, " ")
 }
 
 
@@ -330,7 +326,6 @@ func randomVerse(db *sql.DB) []string {
 // these are a string for a reason...I think beause random verse needs to return a []string, so it made it easier to do? because the bookname is a string,
 // And I wanted it to return a single array
 func printVerse(db *sql.DB, book string, chapter string, verse string) {
-	
 	chapterInt, _ := strconv.Atoi(chapter)
 	verseInt, _ := strconv.Atoi(verse)
 
@@ -355,7 +350,8 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 			fmt.Println("Error in query of exact search: ", err)
 			return
 		}
-    defer rows.Close()
+
+    	defer rows.Close()
 
 		if !rows.Next() {
 			fmt.Println("No search found matching: ", os.Args[3])
@@ -388,7 +384,8 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 			fmt.Println("Error in query of search: ", err)
 			return
 		}
-    defer rows.Close()
+
+    	defer rows.Close()
 
 		if !rows.Next() {
 			fmt.Println("No search found matching: ", os.Args[2])
@@ -417,7 +414,6 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 
 // This runs if no "flags" are provided, but there may be arguments. 
 func singleShotMode(db *sql.DB) {
-
 	// if no argurments provided, print all books
 	if len(os.Args) == 1 {
 		for i := 0; i < len(allBooks); i++ {
@@ -457,7 +453,7 @@ func singleShotMode(db *sql.DB) {
 
 
 // This function runs if you provide only a book
-// I don't really want to use this. I don't want to print entire books...
+// I don't really want to use this. I don't want to print entire books...But maybe. I'll leave it for now
 func printBook() {
 
 }
@@ -486,7 +482,6 @@ func printChapters(db *sql.DB, args Args) {
 
 	// This is for a single chapter ie "bible "1 Corinthians" 1"
 	} else {
-
 		verses := getAllVersesInChapter(db, args.BookName, args.Chapters)
 
 		for i := 1; i <= verses; i++ {
@@ -507,6 +502,7 @@ func printVerses(db *sql.DB, args Args) {
 		for i := 0; i < len(verses); i ++ {
 			printVerse(db, args.BookName, args.Chapters, strconv.Itoa(verses[i]))
 		}
+
 	// This is for a single verse
 	} else {
 		printVerse(db, args.BookName, args.Chapters, args.Verses)
@@ -553,6 +549,7 @@ func getAllChaptersInBook(db *sql.DB, bookName string) int {
 		}
 		
 	}
+
 	return len(uniqueChapters)
 }
 
@@ -573,14 +570,8 @@ func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) int {
         }
         verses = append(verses, verse)
     }
+
     return len(verses)
-}
-
-
-// What is this? I don't use it...
-// REMOVE
-func printAllVerses(db *sql.DB, bookName string, chapter int, verse int) {
-	fmt.Println("printAllVerses func")
 }
 
 
@@ -611,25 +602,6 @@ func getIntsStartAndEnd(s string) ([]int, error) {
 }
 
 
-// it doesn't appear I ever use this?
-// REMOVE
-func parseVerseInput(input string) []int {
-    var verses []int
-    if strings.Contains(input, "-") {
-        parts := strings.Split(input, "-")
-        start, _ := strconv.Atoi(parts[0])
-        end, _ := strconv.Atoi(parts[1])
-        for i := start; i <= end; i++ {
-            verses = append(verses, i)
-        }
-    } else {
-        verse, _ := strconv.Atoi(input)
-        verses = append(verses, verse)
-    }
-    return verses
-}
-
-
 // This doesn't even work...
 func clearConsole() {
 	cmd := exec.Command("clear") // For Unix/Linux
@@ -646,10 +618,12 @@ func clearConsole() {
 // This Returns the width of the terminal (used for wordwrap)
 func termWidth() int {
 	termWidth, _, err := term.GetSize(0)
-  if err != nil {
+	if err != nil {
 		fmt.Println("Error geting terminal width: ", err)
 		return 0
-  }
+  	}
+
+	// Return with -1 so that it always has a gap of at least one spot on the right side. Just better readability.
 	return termWidth - 1
 }
 
