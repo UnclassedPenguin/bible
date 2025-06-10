@@ -34,10 +34,10 @@ type Bible struct {
 }
 
 // This struct is to hold the command line argurments
-type Args struct {
+type Passage struct {
 	BookName	string
-	Chapters  	string
-	Verses		string
+	Chapter  	string
+	Verse		string
 }
 
 var allBooks = []string{
@@ -132,8 +132,8 @@ func interactiveMode(db *sql.DB) {
 
 		// Check if it was 'r' for random, and if so, get id of random verse to start at
 		if len(userInputSplit) == 1 && userInputSplit[0] == "r" {
-			rVerse := randomVerse(db)
-			id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
+			passage := randomVerse(db)
+			id = getIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 			break
 		// If any other single character, prompt proper usage
 		} else if len(userInputSplit) == 1 {
@@ -176,9 +176,9 @@ func interactiveMode(db *sql.DB) {
 					fmt.Println("You are at the first verse.")
 				}
 			case "r": // Get a random verse
-				rVerse := randomVerse(db)
+				passage := randomVerse(db)
 				//Get id of random verse
-				id = getIdOfVerse(db, rVerse[0], rVerse[1], rVerse[2])
+				id = getIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 			case "q": // quit :p
 				return
 			case "x":
@@ -222,8 +222,15 @@ func parseInteractiveCommand(db *sql.DB, split []string) int {
 	var id int
 
 	// This is a special case for "Song of Solomon", which is the only 3 word book
-	if (split[0][0] == '"' || split[0][0] == '\'') && split[0] == "\"Song" {
+	if split[0][0] == '"' && split[0] == "\"Song" {
 		bookName = strings.Trim(split[0] + " " + split[1] + " " + split[2], "\"")
+		chapter = split[3]
+		verse = split[4]
+		id = getIdOfVerse(db, bookName, chapter, verse)
+		return id
+	// This is a special case for 'Song of Solomon' (if single quotes are used)
+	} else if split[0][0] == '\'' && split[0] == "'Song" {
+		bookName = strings.Trim(split[0] + " " + split[1] + " " + split[2], "'")
 		chapter = split[3]
 		verse = split[4]
 		id = getIdOfVerse(db, bookName, chapter, verse)
@@ -270,20 +277,21 @@ func infoMode(db *sql.DB) {
 
 	// If just a book is provided, print Number of chapters
 	if len(os.Args) == 3 {
-		var args Args
-		args.BookName = os.Args[2]
+		var passage Passage
+		passage.BookName = os.Args[2]
 
-		chapters := getAllChaptersInBook(db, args.BookName)
-		fmt.Printf("Chapters in %s: %d\n", args.BookName, chapters)
+		chapters := getAllChaptersInBook(db, passage.BookName)
+		fmt.Printf("Chapters in %s: %d\n", passage.BookName, chapters)
 	}
 
 	// if a book and a chapter, print number of verses
 	if len(os.Args) == 4 {
-		var args Args
-		args.BookName = os.Args[2]
-		args.Chapters = os.Args[3]
-		verses := getAllVersesInChapter(db, args.BookName, args.Chapters)
-		fmt.Printf("Verses in %s %s: %d\n", args.BookName, args.Chapters, verses)
+		var passage Passage 
+		passage.BookName = os.Args[2]
+		passage.Chapter = os.Args[3]
+
+		verses := getAllVersesInChapter(db, passage.BookName, passage.Chapter)
+		fmt.Printf("Verses in %s %s: %d\n", passage.BookName, passage.Chapter, verses)
 	}
 }
 
@@ -291,34 +299,36 @@ func infoMode(db *sql.DB) {
 // Fucntion to print a random verse. use -r on command line
 func printRandomVerse(db *sql.DB) {
 	// Get random verse
-	random := randomVerse(db)
+	passage := randomVerse(db)
 	// Print random verse
-	printVerse(db, random[0], random[1], random[2])
+	printVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 }
 
 
 // This returns a random book, chapter and verse in a string array
-func randomVerse(db *sql.DB) []string {
+func randomVerse(db *sql.DB) Passage {
+	var passage Passage
+
 	rand.Seed(time.Now().UnixNano())
 
 	// Get a random book
-	randomBook := allBooks[rand.Intn(66)]
+	passage.BookName = allBooks[rand.Intn(66)]
 
 	// Get number of chapters in random book
-	chapters := getAllChaptersInBook(db, randomBook)
+	chapters := getAllChaptersInBook(db, passage.BookName)
 
 	// Get random chapter
 	// i think this needs the +1 to not try to pick chapter "0". needs to be 1-chapters It might be a bug?
-	randomChapter := rand.Intn(chapters) + 1
+	passage.Chapter = strconv.Itoa(rand.Intn(chapters) + 1)
 
 	// Get number of verses in chapter
-	verses := getAllVersesInChapter(db, randomBook, strconv.Itoa(randomChapter))
+	verses := getAllVersesInChapter(db, passage.BookName, passage.Chapter)
 
 	// Get random verse
 	// I think this needs the plus 1 to not try to get verse "0". it might be a bug?
-	randomVerse := rand.Intn(verses) + 1
+	passage.Verse = strconv.Itoa(rand.Intn(verses) + 1)
 
-	return []string{randomBook, strconv.Itoa(randomChapter), strconv.Itoa(randomVerse)}
+	return passage
 }
 
 
@@ -344,7 +354,7 @@ func printVerse(db *sql.DB, book string, chapter string, verse string) {
 func searchForTerm(db *sql.DB, exactMode bool) {
 	// This executes an exact search for the search term
 	if exactMode {
-		query := "select bookName, chapter, verse, text from bible where text like ?"
+		query := "SELECT bookName, chapter, verse, text FROM bible WHERE text LIKE ?"
 		rows, err := db.Query(query, "% "+os.Args[3]+" %")
 		if err != nil {
 			fmt.Println("Error in query of exact search: ", err)
@@ -377,7 +387,7 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 
 	// This executes a search that takes any match, ie love with match with loved
 	} else {
-		query := "select bookName, chapter, verse, text from bible where text like ?"
+		query := "SELECT bookName, chapter, verse, text FROm bible WHERE text LIKE ?"
 		// This is the only thing that is different from exact search. No spaces around the search term
 		rows, err := db.Query(query, "%"+os.Args[2]+"%")
 		if err != nil {
@@ -427,27 +437,27 @@ func singleShotMode(db *sql.DB) {
 		return
 	}
 
-	var args Args
-	args.BookName = os.Args[1]
+	var passage Passage
+	passage.BookName = os.Args[1]
 
 	// If just a book is provided, Print number of chapters.
 	if len(os.Args) == 2 {
-		chapters := getAllChaptersInBook(db, args.BookName)
-		fmt.Printf("Chapters in %s: %d\n", args.BookName, chapters)
+		chapters := getAllChaptersInBook(db, passage.BookName)
+		fmt.Printf("Chapters in %s: %d\n", passage.BookName, chapters)
 		fmt.Println()
 	}
 
 	// if a book and a chapter, print the entire chapter
 	if len(os.Args) == 3 {
-		args.Chapters = os.Args[2]
-		printChapters(db, args)
+		passage.Chapter = os.Args[2]
+		printChapters(db, passage)
 	}
 
 	// if book and chapter and verse(s), print the verse(s)
 	if len(os.Args) == 4 {
-		args.Chapters = os.Args[2]
-		args.Verses = os.Args[3]
-		printVerses(db, args)
+		passage.Chapter = os.Args[2]
+		passage.Verse = os.Args[3]
+		printVerses(db, passage)
 	}
 }
 
@@ -460,52 +470,52 @@ func printBook() {
 
 
 // This function runs if you provide 2 arguments, ie a book and a chapter or range of chapters
-func printChapters(db *sql.DB, args Args) {
+func printChapters(db *sql.DB, passage Passage) {
 	// This is for a range of chapters ie "bible "1 Cornthians" 1-3"
-	if strings.Contains(args.Chapters, "-") {
-		chapters, err := getIntsStartAndEnd(args.Chapters)
+	if strings.Contains(passage.Chapter, "-") {
+		chapters, err := getIntsStartAndEnd(passage.Chapter)
 		if err != nil {
 			fmt.Println("Error getting all chapters: ", err)
 		}
 
 		// For every chapter
 		for i := 0 ; i < len(chapters); i++{
-			fmt.Println("Chapter ", chapters[i])
+			fmt.Printf("Chapter %d\n\n", chapters[i])
 			// We need to get the number of verses for the chapter
-			verses := getAllVersesInChapter(db, args.BookName, strconv.Itoa(chapters[i]))
+			verses := getAllVersesInChapter(db, passage.BookName, strconv.Itoa(chapters[i]))
 
 			// For every verse
 			for j := 1; j <= verses; j++ {
-				printVerse(db, args.BookName, strconv.Itoa(chapters[i]), strconv.Itoa(j))
+				printVerse(db, passage.BookName, strconv.Itoa(chapters[i]), strconv.Itoa(j))
 			}
 		}
 
 	// This is for a single chapter ie "bible "1 Corinthians" 1"
 	} else {
-		verses := getAllVersesInChapter(db, args.BookName, args.Chapters)
+		verses := getAllVersesInChapter(db, passage.BookName, passage.Chapter)
 
 		for i := 1; i <= verses; i++ {
-			printVerse(db, args.BookName, args.Chapters, strconv.Itoa(i))
+			printVerse(db, passage.BookName, passage.Chapter, strconv.Itoa(i))
 		}
 	}
 }
 
 
 // This function runs if you provide all 3 arguments. Ie  a book, a chapter, and a verse or range of verses.
-func printVerses(db *sql.DB, args Args) {
+func printVerses(db *sql.DB, passage Passage) {
 	// This is for a range of verses ie "bible "1 Corinthians" 1 1-5"
-	if strings.Contains(args.Verses, "-") {
-		verses, err := getIntsStartAndEnd(args.Verses)
+	if strings.Contains(passage.Verse, "-") {
+		verses, err := getIntsStartAndEnd(passage.Verse)
 		if err != nil {
 			fmt.Println("Error gettings all verses: ", err)
 		}
 		for i := 0; i < len(verses); i ++ {
-			printVerse(db, args.BookName, args.Chapters, strconv.Itoa(verses[i]))
+			printVerse(db, passage.BookName, passage.Chapter, strconv.Itoa(verses[i]))
 		}
 
 	// This is for a single verse
 	} else {
-		printVerse(db, args.BookName, args.Chapters, args.Verses)
+		printVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 	}
 }
 
@@ -531,6 +541,7 @@ func getAllChaptersInBook(db *sql.DB, bookName string) int {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer rows.Close()
 	
 	uniqueMap := make(map[int]struct{})
@@ -547,7 +558,6 @@ func getAllChaptersInBook(db *sql.DB, bookName string) int {
 			uniqueMap [chapter] = struct{}{}
 			uniqueChapters = append(uniqueChapters, chapter)
 		}
-		
 	}
 
 	return len(uniqueChapters)
@@ -561,6 +571,7 @@ func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) int {
     if err != nil {
         log.Fatal(err)
     }
+
     defer rows.Close()
 
     for rows.Next() {
@@ -579,17 +590,17 @@ func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) int {
 func getIntsStartAndEnd(s string) ([]int, error) {
 	split := strings.Split(s, "-")
 	if len(split) != 2 {
-		return nil, fmt.Errorf("invalid format, expected 'start-end'")
+		return nil, fmt.Errorf("Invalid format, expected 'start-end'")
 	}
 
 	start, err := strconv.Atoi(split[0])
 	if err != nil {
-		return nil, fmt.Errorf("error converting start to int: %v", err)
+		return nil, fmt.Errorf("Error converting start to int: %v", err)
 	}
 
 	end, err := strconv.Atoi(split[1])
 	if err != nil {
-		return nil, fmt.Errorf("error converting end to int: %v", err)
+		return nil, fmt.Errorf("Error converting end to int: %v", err)
 	}
 
 	// Create a slice to hold the integers from start to end
@@ -631,13 +642,14 @@ func termWidth() int {
 // Wraps the text so that it doesn't split a word in the middle
 func wordWrap(str string) {
 	lineWidth := termWidth()
-	//words := strings.Fields(strings.TrimSpace(text))
 	words := strings.Fields(str)
 	if len(words) == 0 {
 		fmt.Println(str)
 	}
+
 	wrapped := words[0]
 	spaceLeft := lineWidth - len(wrapped)
+
 	for _, word := range words[1:] {
 		if len(word)+1 > spaceLeft {
 			wrapped += "\n" + word
@@ -647,6 +659,7 @@ func wordWrap(str string) {
 			spaceLeft -= 1 + len(word)
 		}
 	}
+
 	fmt.Println(wrapped)
 }
 
