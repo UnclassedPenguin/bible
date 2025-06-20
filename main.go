@@ -135,14 +135,14 @@ func interactiveMode(db *sql.DB) {
 		// Check if it was 'r' for random, and if so, get id of random verse to start at
 		if len(userInputSplit) == 1 && userInputSplit[0] == "r" {
 			passage := randomVerse(db)
-			id = getIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
+			id = f.GetIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 			break
 		// If any other single character, prompt proper usage
 		} else if len(userInputSplit) == 1 {
 			fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
 		// If Specific book chapter verse to start at, get the id
 		} else {
-			id = parseInteractiveCommand(db, userInputSplit)
+			id = f.ParseInteractiveCommand(db, userInputSplit)
 			break
 		}
 	}
@@ -180,7 +180,7 @@ func interactiveMode(db *sql.DB) {
 			case "r": // Get a random verse
 				passage := randomVerse(db)
 				//Get id of random verse
-				id = getIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
+				id = f.GetIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 			case "q": // quit :p
 				return
 			case "x":
@@ -189,60 +189,13 @@ func interactiveMode(db *sql.DB) {
 				fmt.Println("Invalid input. Please enter 'n', 'p', 'r' or 'q'.")
 			}
 		} else {
-			id = parseInteractiveCommand(db, inputSplit)
+			id = f.ParseInteractiveCommand(db, inputSplit)
 		}
 
 		// Clear the console for better readability
 		// This doesn't even work so I'm going to comment it out for now
 		//clearConsole()
 	}
-}
-
-
-//  Takes the command from interactive mode (if it is more than a single character), returns the id of the verse to go to
-func parseInteractiveCommand(db *sql.DB, split []string) int {
-	var bookName string
-	var chapter string
-	var verse string
-	var id int
-
-	// This is a special case for "Song of Solomon", which is the only 3 word book
-	if split[0][0] == '"' && split[0] == "\"Song" {
-		bookName = strings.Trim(split[0] + " " + split[1] + " " + split[2], "\"")
-		chapter = split[3]
-		verse = split[4]
-		id = getIdOfVerse(db, bookName, chapter, verse)
-		return id
-	// This is a special case for 'Song of Solomon' (if single quotes are used)
-	} else if split[0][0] == '\'' && split[0] == "'Song" {
-		bookName = strings.Trim(split[0] + " " + split[1] + " " + split[2], "'")
-		chapter = split[3]
-		verse = split[4]
-		id = getIdOfVerse(db, bookName, chapter, verse)
-		return id
-	// Detect if it is a numbered book ("1 John" etc)
-	} else if split[0][0] == '"' {
-		bookName = strings.Trim(split[0] + " " + split[1], "\"")
-		chapter = split[2]
-		verse = split[3]
-		id = getIdOfVerse(db, bookName, chapter, verse)
-		return id
-	// This is just to catch if the user uses single quotes instead of double
-	} else if  split[0][0] == '\'' {
-		bookName = strings.Trim(split[0] + " " + split[1], "'")
-		chapter = split[2]
-		verse = split[3]
-		id = getIdOfVerse(db, bookName, chapter, verse)
-		return id
-	// If not a numbered book, get the verse
-	} else {
-		bookName = split[0]
-		chapter = split[1]
-		verse = split[2]
-		id = getIdOfVerse(db, bookName, chapter, verse)
-		return id
-	}
-	return -1
 }
 
 
@@ -504,19 +457,6 @@ func printVerses(db *sql.DB, passage Passage) {
 }
 
 
-// Get the id of a verse. Would be useful in interactive mode, so that then you could just go next or previous based on id.
-func getIdOfVerse(db *sql.DB, bookName string, chapter string, verse string) int {
-	var id int
-	query := "SELECT id FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?"
-	err := db.QueryRow(query, bookName, chapter, verse).Scan(&id)
-	if err != nil {
-		fmt.Printf("Can't get id of %s %s %s: ", bookName, chapter, verse)
-		fmt.Println(err)
-	}
-	
-	return id
-}
-
 
 // This gives number of chapters in a book
 func getAllChaptersInBook(db *sql.DB, bookName string) int {
@@ -623,6 +563,6 @@ func testFunction(db *sql.DB) {
 	fmt.Println("Verse: ")
 	fmt.Scan(&verse)
 
-	id := getIdOfVerse(db, book, chapter, verse)
+	id := f.GetIdOfVerse(db, book, chapter, verse)
 	fmt.Printf("ID: %d\n", id)
 }
