@@ -1,8 +1,7 @@
+This program is basically done. Check out [the docs](https://docs.unclassed.ca/bible)  
+
 ## Todo:  
 - [ ] Need to fix in interactive mode what happens when you enter a verse that doesnt exist
-- [ ] Add bookmark function  
-- [ ] Add favorite function  
-- [ ] Add a print all?  
 
 ## Finished:
 - [x] Add a way to list all books  
@@ -22,3 +21,7 @@
 - [x] Combine if statements in singleShotMode function. Should be if else if  
 - [x] I think maybe i could change passage struct to have chapter and verse as int. It might clean up some code where I dont have to convert back and forth? Could change printVerse function  
     - [x] I tried this, I wasn't really happy with it...  
+- [x] Add bookmark function  
+- [x] Add favorite function  
+- [ ] Add a print all?  
+    - [x] nah
