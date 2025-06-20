@@ -235,26 +235,9 @@ func printRandomVerse(db *sql.DB) {
 	// Get random verse
 	passage := f.RandomVerse(db)
 	// Print random verse
-	printVerse(db, passage.BookName, passage.Chapter, passage.Verse)
+	f.PrintVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 }
 
-
-// Print Verse
-// these are a string for a reason...I think beause random verse needs to return a []string, so it made it easier to do? because the bookname is a string,
-// And I wanted it to return a single array
-func printVerse(db *sql.DB, book string, chapter string, verse string) {
-	chapterInt, _ := strconv.Atoi(chapter)
-	verseInt, _ := strconv.Atoi(verse)
-
-	var bibleVerse Bible
-	err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", book, chapterInt, verseInt).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
-	if err != nil {
-		fmt.Printf("Verse %s %s:%s not found\n", book, chapter, verse)
-	}
-	fmt.Printf("%s %s:%s\n", book, chapter, verse)
-	f.WordWrap(bibleVerse.Text)
-	fmt.Printf("\n")
-}
 
 
 // Search for a term or an exact term
@@ -394,7 +377,7 @@ func printChapters(db *sql.DB, passage Passage) {
 
 			// For every verse
 			for j := 1; j <= verses; j++ {
-				printVerse(db, passage.BookName, strconv.Itoa(chapters[i]), strconv.Itoa(j))
+				f.PrintVerse(db, passage.BookName, strconv.Itoa(chapters[i]), strconv.Itoa(j))
 			}
 		}
 
@@ -403,7 +386,7 @@ func printChapters(db *sql.DB, passage Passage) {
 		verses := f.GetAllVersesInChapter(db, passage.BookName, passage.Chapter)
 
 		for i := 1; i <= verses; i++ {
-			printVerse(db, passage.BookName, passage.Chapter, strconv.Itoa(i))
+			f.PrintVerse(db, passage.BookName, passage.Chapter, strconv.Itoa(i))
 		}
 	}
 }
@@ -418,12 +401,12 @@ func printVerses(db *sql.DB, passage Passage) {
 			fmt.Println("Error gettings all verses: ", err)
 		}
 		for i := 0; i < len(verses); i ++ {
-			printVerse(db, passage.BookName, passage.Chapter, strconv.Itoa(verses[i]))
+			f.PrintVerse(db, passage.BookName, passage.Chapter, strconv.Itoa(verses[i]))
 		}
 
 	// This is for a single verse
 	} else {
-		printVerse(db, passage.BookName, passage.Chapter, passage.Verse)
+		f.PrintVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 	}
 }
 

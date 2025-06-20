@@ -13,6 +13,18 @@ import (
 	"golang.org/x/term"
 )
 
+
+// This struct is to reference the sql database
+type Bible struct {
+	ID       	int
+	BookName	string
+	Book		int
+	Chapter  	int
+	Verse    	int
+	Text     	string
+}
+
+
 // This struct is to hold the command line argurments
 type Passage struct {
 	BookName	string
@@ -36,6 +48,24 @@ var allBooks = []string{
     "Titus", "Philemon", "Hebrews", "James", "1 Peter",
     "2 Peter", "1 John", "2 John", "3 John", "Jude",
     "Revelation",
+}
+
+
+// Print Verse
+// these are a string for a reason...I think beause random verse needs to return a []string, so it made it easier to do? because the bookname is a string,
+// And I wanted it to return a single array
+func PrintVerse(db *sql.DB, book string, chapter string, verse string) {
+	chapterInt, _ := strconv.Atoi(chapter)
+	verseInt, _ := strconv.Atoi(verse)
+
+	var bibleVerse Bible
+	err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", book, chapterInt, verseInt).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
+	if err != nil {
+		fmt.Printf("Verse %s %s:%s not found\n", book, chapter, verse)
+	}
+	fmt.Printf("%s %s:%s\n", book, chapter, verse)
+	WordWrap(bibleVerse.Text)
+	fmt.Printf("\n")
 }
 
 
