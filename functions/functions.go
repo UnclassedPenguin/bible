@@ -6,6 +6,24 @@ import (
 	"golang.org/x/term"
 )
 
+
+// Function to ask the user for input in interactive mode
+func GetUserInput(prompt string) []string {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print(prompt)
+	bookChapterVerse, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading input:", err)
+		return []string{}
+	}
+
+	// Clean the white space (including the newline character)
+	userInput := strings.TrimSpace(bookChapterVerse)
+
+	return strings.Split(userInput, " ")
+}
+
+
 // This Returns the width of the terminal (used for wordwrap)
 func termWidth() int {
 	termWidth, _, err := term.GetSize(0)

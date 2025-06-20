@@ -90,6 +90,7 @@ func main() {
 	searchMode := flag.Bool("s", false, "search for term")
 	exactMode := flag.Bool("e", false, "search for exact term, use with -s")
 	testMode := flag.Bool("t", false, "Test function, for testing.")
+	favoriteMode := flag.Bool("f", false, "List favorite verses")
 	flag.Parse()
 
 	db, err := sql.Open("sqlite3", tmpFile.Name())
@@ -112,6 +113,8 @@ func main() {
 		searchForTerm(db, *exactMode)
 	case *testMode:
 		testFunction(db)
+	case *favoriteMode:
+		favorite()
 	default:
 		singleShotMode(db)
 	}
@@ -128,7 +131,7 @@ func interactiveMode(db *sql.DB) {
 	// Loop to get initial input from user. 
 	for {
 		// Get user input 
-		userInputSplit := getUserInput("Enter Book Chapter Name(ie Genesis 1 1): ")
+		userInputSplit := f.GetUserInput("Enter Book Chapter Name(ie Genesis 1 1): ")
 
 		// Check if it was 'r' for random, and if so, get id of random verse to start at
 		if len(userInputSplit) == 1 && userInputSplit[0] == "r" {
@@ -163,7 +166,7 @@ func interactiveMode(db *sql.DB) {
 		f.WordWrap(bibleVerse.Text)
 		
 		// Prompt for next command
-		inputSplit := getUserInput(": ")
+		inputSplit := f.GetUserInput(": ")
 
 		if len(inputSplit) == 1 {
 			switch strings.ToLower(inputSplit[0]) {
@@ -194,23 +197,6 @@ func interactiveMode(db *sql.DB) {
 		// This doesn't even work so I'm going to comment it out for now
 		//clearConsole()
 	}
-}
-
-
-// Function to ask the user for input in interactive mode
-func getUserInput(prompt string) []string {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print(prompt)
-	bookChapterVerse, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("Error reading input:", err)
-		return []string{}
-	}
-
-	// Clean the white space (including the newline character)
-	userInput := strings.TrimSpace(bookChapterVerse)
-
-	return strings.Split(userInput, " ")
 }
 
 
@@ -419,6 +405,9 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 	}
 }
 
+func favorite() {
+	fmt.Println("Favorite mode")
+}
 
 // This runs if no "flags" are provided, but there may be arguments. 
 func singleShotMode(db *sql.DB) {
@@ -582,7 +571,7 @@ func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) int {
 }
 
 
-// getIntsStartAndEnd parses a string in the format "start-end" and returns a slice of integers.
+// getIntsStartAndEnd parses a string in the format "start-end" (ie 5-10) and returns a slice of integers (ie [5,6,7,8,9,10]).
 func getIntsStartAndEnd(s string) ([]int, error) {
 	split := strings.Split(s, "-")
 	if len(split) != 2 {
