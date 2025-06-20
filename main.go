@@ -11,12 +11,10 @@ import (
 	"fmt"
 	"log"
 	"flag"
-	"time"
 	_ "embed"
 	"os/exec"
 	"strconv"
 	"strings"
-	"math/rand"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	f "bible/functions"
@@ -134,7 +132,7 @@ func interactiveMode(db *sql.DB) {
 
 		// Check if it was 'r' for random, and if so, get id of random verse to start at
 		if len(userInputSplit) == 1 && userInputSplit[0] == "r" {
-			passage := randomVerse(db)
+			passage := f.RandomVerse(db)
 			id = f.GetIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 			break
 		// If any other single character, prompt proper usage
@@ -178,7 +176,7 @@ func interactiveMode(db *sql.DB) {
 					fmt.Println("You are at the first verse.")
 				}
 			case "r": // Get a random verse
-				passage := randomVerse(db)
+				passage := f.RandomVerse(db)
 				//Get id of random verse
 				id = f.GetIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
 			case "q": // quit :p
@@ -217,7 +215,7 @@ func infoMode(db *sql.DB) {
 		var passage Passage
 		passage.BookName = os.Args[2]
 
-		chapters := getAllChaptersInBook(db, passage.BookName)
+		chapters := f.GetAllChaptersInBook(db, passage.BookName)
 		fmt.Printf("Chapters in %s: %d\n", passage.BookName, chapters)
 
 	// if a book and a chapter, print number of verses
@@ -226,7 +224,7 @@ func infoMode(db *sql.DB) {
 		passage.BookName = os.Args[2]
 		passage.Chapter = os.Args[3]
 
-		verses := getAllVersesInChapter(db, passage.BookName, passage.Chapter)
+		verses := f.GetAllVersesInChapter(db, passage.BookName, passage.Chapter)
 		fmt.Printf("Verses in %s %s: %d\n", passage.BookName, passage.Chapter, verses)
 	}
 }
@@ -235,36 +233,9 @@ func infoMode(db *sql.DB) {
 // Fucntion to print a random verse. use -r on command line
 func printRandomVerse(db *sql.DB) {
 	// Get random verse
-	passage := randomVerse(db)
+	passage := f.RandomVerse(db)
 	// Print random verse
 	printVerse(db, passage.BookName, passage.Chapter, passage.Verse)
-}
-
-
-// This returns a random book, chapter and verse in a string array
-func randomVerse(db *sql.DB) Passage {
-	var passage Passage
-
-	rand.Seed(time.Now().UnixNano())
-
-	// Get a random book
-	passage.BookName = allBooks[rand.Intn(66)]
-
-	// Get number of chapters in random book
-	chapters := getAllChaptersInBook(db, passage.BookName)
-
-	// Get random chapter
-	// i think this needs the +1 to not try to pick chapter "0". needs to be 1-chapters It might be a bug?
-	passage.Chapter = strconv.Itoa(rand.Intn(chapters) + 1)
-
-	// Get number of verses in chapter
-	verses := getAllVersesInChapter(db, passage.BookName, passage.Chapter)
-
-	// Get random verse
-	// I think this needs the plus 1 to not try to get verse "0". it might be a bug?
-	passage.Verse = strconv.Itoa(rand.Intn(verses) + 1)
-
-	return passage
 }
 
 
@@ -381,7 +352,7 @@ func singleShotMode(db *sql.DB) {
 
 	// If just a book is provided, Print number of chapters.
 	if len(os.Args) == 2 {
-		chapters := getAllChaptersInBook(db, passage.BookName)
+		chapters := f.GetAllChaptersInBook(db, passage.BookName)
 		fmt.Printf("Chapters in %s: %d\n", passage.BookName, chapters)
 		fmt.Println()
 
@@ -419,7 +390,7 @@ func printChapters(db *sql.DB, passage Passage) {
 		for i := 0 ; i < len(chapters); i++{
 			fmt.Printf("%s Chapter %d\n\n", passage.BookName, chapters[i])
 			// We need to get the number of verses for the chapter
-			verses := getAllVersesInChapter(db, passage.BookName, strconv.Itoa(chapters[i]))
+			verses := f.GetAllVersesInChapter(db, passage.BookName, strconv.Itoa(chapters[i]))
 
 			// For every verse
 			for j := 1; j <= verses; j++ {
@@ -429,7 +400,7 @@ func printChapters(db *sql.DB, passage Passage) {
 
 	// This is for a single chapter ie "bible "1 Corinthians" 1"
 	} else {
-		verses := getAllVersesInChapter(db, passage.BookName, passage.Chapter)
+		verses := f.GetAllVersesInChapter(db, passage.BookName, passage.Chapter)
 
 		for i := 1; i <= verses; i++ {
 			printVerse(db, passage.BookName, passage.Chapter, strconv.Itoa(i))
@@ -457,57 +428,6 @@ func printVerses(db *sql.DB, passage Passage) {
 }
 
 
-
-// This gives number of chapters in a book
-func getAllChaptersInBook(db *sql.DB, bookName string) int {
-	query := "SELECT chapter FROM bible WHERE bookName = ?"
-	rows, err := db.Query(query, bookName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer rows.Close()
-	
-	uniqueMap := make(map[int]struct{})
-	var uniqueChapters []int
-	
-	for rows.Next() {
-		var chapter int
-
-		if err := rows.Scan(&chapter); err != nil {
-			log.Fatal(err)
-		}
-
-		if _, exists := uniqueMap[chapter]; !exists {
-			uniqueMap [chapter] = struct{}{}
-			uniqueChapters = append(uniqueChapters, chapter)
-		}
-	}
-
-	return len(uniqueChapters)
-}
-
-// This gives the number of verses in a chapter
-func getAllVersesInChapter(db *sql.DB, bookName string, chapter string) int {
-    var verses []int
-    query := "SELECT verse FROM bible WHERE bookName = ? AND chapter = ?"
-    rows, err := db.Query(query, bookName, chapter)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    defer rows.Close()
-
-    for rows.Next() {
-        var verse int
-        if err := rows.Scan(&verse); err != nil {
-            log.Fatal(err)
-        }
-        verses = append(verses, verse)
-    }
-
-    return len(verses)
-}
 
 
 // getIntsStartAndEnd parses a string in the format "start-end" (ie 5-10) and returns a slice of integers (ie [5,6,7,8,9,10]).

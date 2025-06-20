@@ -3,11 +3,40 @@ package functions
 import (
 	"os"
 	"fmt"
+	"log"
+	"time"
 	"bufio"
 	"strings"
+	"strconv"
+	"math/rand"
 	"database/sql"
 	"golang.org/x/term"
 )
+
+// This struct is to hold the command line argurments
+type Passage struct {
+	BookName	string
+	Chapter  	string
+	Verse		string
+}
+
+
+var allBooks = []string{
+    "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
+    "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
+    "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra",
+    "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
+    "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations",
+    "Ezekiel", "Daniel", "Hosea", "Joel", "Amos",
+    "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk",
+    "Zephaniah", "Haggai", "Zechariah", "Malachi", "Matthew",
+    "Mark", "Luke", "John", "Acts", "Romans",
+    "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians",
+    "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy",
+    "Titus", "Philemon", "Hebrews", "James", "1 Peter",
+    "2 Peter", "1 John", "2 John", "3 John", "Jude",
+    "Revelation",
+}
 
 
 // Function to ask the user for input in interactive mode
@@ -85,6 +114,86 @@ func GetIdOfVerse(db *sql.DB, bookName string, chapter string, verse string) int
 	}
 	
 	return id
+}
+
+
+// This returns a random book, chapter and verse in a string array
+func RandomVerse(db *sql.DB) Passage {
+	var passage Passage
+
+	rand.Seed(time.Now().UnixNano())
+
+	// Get a random book
+	passage.BookName = allBooks[rand.Intn(66)]
+
+	// Get number of chapters in random book
+	chapters := GetAllChaptersInBook(db, passage.BookName)
+
+	// Get random chapter
+	// i think this needs the +1 to not try to pick chapter "0". needs to be 1-chapters It might be a bug?
+	passage.Chapter = strconv.Itoa(rand.Intn(chapters) + 1)
+
+	// Get number of verses in chapter
+	verses := GetAllVersesInChapter(db, passage.BookName, passage.Chapter)
+
+	// Get random verse
+	// I think this needs the plus 1 to not try to get verse "0". it might be a bug?
+	passage.Verse = strconv.Itoa(rand.Intn(verses) + 1)
+
+	return passage
+}
+
+
+// This gives the number of verses in a chapter
+func GetAllVersesInChapter(db *sql.DB, bookName string, chapter string) int {
+    var verses []int
+    query := "SELECT verse FROM bible WHERE bookName = ? AND chapter = ?"
+    rows, err := db.Query(query, bookName, chapter)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    defer rows.Close()
+
+    for rows.Next() {
+        var verse int
+        if err := rows.Scan(&verse); err != nil {
+            log.Fatal(err)
+        }
+        verses = append(verses, verse)
+    }
+
+    return len(verses)
+}
+
+
+// This gives number of chapters in a book
+func GetAllChaptersInBook(db *sql.DB, bookName string) int {
+	query := "SELECT chapter FROM bible WHERE bookName = ?"
+	rows, err := db.Query(query, bookName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer rows.Close()
+	
+	uniqueMap := make(map[int]struct{})
+	var uniqueChapters []int
+	
+	for rows.Next() {
+		var chapter int
+
+		if err := rows.Scan(&chapter); err != nil {
+			log.Fatal(err)
+		}
+
+		if _, exists := uniqueMap[chapter]; !exists {
+			uniqueMap [chapter] = struct{}{}
+			uniqueChapters = append(uniqueChapters, chapter)
+		}
+	}
+
+	return len(uniqueChapters)
 }
 
 
