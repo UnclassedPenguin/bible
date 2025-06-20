@@ -1,7 +1,9 @@
 package functions
 
 import (
+	"os"
 	"fmt"
+	"bufio"
 	"strings"
 	"golang.org/x/term"
 )

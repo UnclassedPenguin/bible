@@ -12,7 +12,6 @@ import (
 	"log"
 	"flag"
 	"time"
-	"bufio"
 	_ "embed"
 	"os/exec"
 	"strconv"
