@@ -111,7 +111,7 @@ func main() {
 	case *test:
 		testFunction(db)
 	case *favorite:
-		favoriteMode()
+		favoriteMode(db)
 	default:
 		singleShotMode(db)
 	}
@@ -134,6 +134,10 @@ func interactiveMode(db *sql.DB) {
 		if len(userInputSplit) == 1 && userInputSplit[0] == "r" {
 			passage := f.RandomVerse(db)
 			id = f.GetIdOfVerse(db, passage.BookName, passage.Chapter, passage.Verse)
+			break
+		// Load bookmark
+		} else if len(userInputSplit) == 1 && userInputSplit[0] == "b" {
+			id = f.LoadBookmark()
 			break
 		// If any other single character, prompt proper usage
 		} else if len(userInputSplit) == 1 {
@@ -175,6 +179,10 @@ func interactiveMode(db *sql.DB) {
 				} else {
 					fmt.Println("You are at the first verse.")
 				}
+			case "b":
+				id = f.BookMark(bibleVerse.ID)
+			case "f":
+				f.Favorites(db, bibleVerse.ID)
 			case "r": // Get a random verse
 				passage := f.RandomVerse(db)
 				//Get id of random verse
@@ -311,8 +319,8 @@ func searchForTerm(db *sql.DB, exact bool) {
 	}
 }
 
-func favoriteMode() {
-	fmt.Println("Favorite mode")
+func favoriteMode(db *sql.DB) {
+	f.ListFavorites(db)
 }
 
 // This runs if no "flags" are provided, but there may be arguments. 

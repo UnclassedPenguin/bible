@@ -6,10 +6,14 @@ import (
 	"log"
 	"time"
 	"bufio"
+	"io/ioutil"
+	"path/filepath"
+	"sort"
 	"strings"
 	"strconv"
 	"math/rand"
 	"database/sql"
+	"encoding/json"
 	"golang.org/x/term"
 )
 
@@ -146,6 +150,17 @@ func GetIdOfVerse(db *sql.DB, bookName string, chapter string, verse string) int
 	return id
 }
 
+func GetVerseFromId(db *sql.DB, id int) Bible {
+	var verse Bible
+	query := "SELECT bookName, chapter, verse, text FROM bible where id = ?"
+	err := db.QueryRow(query, id).Scan(&verse.BookName, &verse.Chapter, &verse.Verse, &verse.Text)
+	if err != nil {
+		fmt.Printf("Can't get verse from id: %d\n", id)
+		fmt.Println(err)
+	}
+
+	return verse
+}
 
 // This returns a random book, chapter and verse in a string array
 func RandomVerse(db *sql.DB) Passage {
@@ -262,4 +277,190 @@ func WordWrap(str string) {
 	}
 
 	fmt.Println(wrapped)
+}
+
+
+// -----------------------------------------------------------------------------
+// Everything beneath here has to do with favorites/bookmarks
+// -----------------------------------------------------------------------------
+
+type SaveData struct {
+	Bookmark  int   `json:"bookmark"`
+	Favorites []int `json:"favorites"`
+}
+
+func (sd *SaveData) SetBookmark(id int) {
+	sd.Bookmark = id
+}
+
+// AddFavorite function to add an integer to favorites if it's not already present
+func (sd *SaveData) AddFavorite(item int) {
+	if !sd.ContainsFavorite(item) {
+		sd.Favorites = append(sd.Favorites, item)
+		sort.Ints(sd.Favorites) // Sort the slice after adding
+	}
+}
+
+
+// RemoveFavorite function to remove an integer from favorites
+func (sd *SaveData) RemoveFavorite(item int) {
+	for i, v := range sd.Favorites {
+		if v == item {
+			// Remove the item by slicing
+			sd.Favorites = append(sd.Favorites[:i], sd.Favorites[i+1:]...)
+			break // Exit the loop after removing the item
+		}
+	}
+}
+
+
+// ContainsFavorite function to check if an integer is already in favorites
+func (sd *SaveData) ContainsFavorite(item int) bool {
+	for _, v := range sd.Favorites {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+
+// Save function to save bookmarks and favorites to a file
+func (sd *SaveData) Save(filename string) error {
+	data, err := json.Marshal(sd)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, data, 0644)
+}
+
+
+// Load function to load bookmarks and favorites from a file
+func (sd *SaveData) Load(filename string) error {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, sd)
+}
+
+
+// GetDataFilePath function to get the data file path
+func GetDataFilePath() string {
+	homeDir, _ := os.UserHomeDir()
+	dataDir := filepath.Join(homeDir, ".local", "share", "bible")
+	os.MkdirAll(dataDir, os.ModePerm) // Create the directory if it doesn't exist
+	return filepath.Join(dataDir, "bible-data.json")
+}
+
+// This will be a fovorites feature. Need to save to a file and be able to read it back (probably "bible -f" will list all favorites)
+func Favorites(db *sql.DB, id int) {
+
+	saveData := &SaveData{}
+
+	// Load existing data from file
+	dataFilePath := GetDataFilePath()
+	if err := saveData.Load(dataFilePath); err != nil && !os.IsNotExist(err) {
+		fmt.Println("Error loading data:", err)
+	}
+
+	if saveData.ContainsFavorite(id) {
+		verse := GetVerseFromId(db, id)
+		fmt.Printf("%s %d:%d already in favorites!\n", verse.BookName, verse.Chapter, verse.Verse)
+		var choice string
+		fmt.Printf("Remove from favorites? (y or N) ")
+		fmt.Scanln(&choice)
+		if choice == "y" {
+			saveData.RemoveFavorite(id)
+
+			// Save data to file
+			if err := saveData.Save(dataFilePath); err != nil {
+				fmt.Println("Error saving data:", err)
+			}
+		}
+	} else {
+		saveData.AddFavorite(id)
+
+		// Save data to file
+		if err := saveData.Save(dataFilePath); err != nil {
+			fmt.Println("Error saving data:", err)
+		}
+	}
+}
+
+
+// This lists your favorites. 
+func ListFavorites(db *sql.DB) {
+	saveData := &SaveData{}
+
+	// Load existing data from file
+	dataFilePath := GetDataFilePath()
+	if err := saveData.Load(dataFilePath); err != nil && !os.IsNotExist(err) {
+		fmt.Println("Error loading data:", err)
+	}
+
+	for _, id := range saveData.Favorites {
+		// Get info from id
+		verse := GetVerseFromId(db, id)
+
+		//Print Verse
+		PrintVerse(db, verse.BookName, strconv.Itoa(verse.Chapter), strconv.Itoa(verse.Verse))
+	}
+}
+
+
+// This will be a bookmark function in interactive mode
+func BookMark(id int) int{
+	var choice string
+	for {
+		fmt.Printf("Would you like to load or save bookmark? (l or s) ")
+		fmt.Scanln(&choice)
+
+		if choice == "l" {
+			saveData := &SaveData{}
+
+			// Load existing data from file
+			dataFilePath := GetDataFilePath()
+			if err := saveData.Load(dataFilePath); err != nil && !os.IsNotExist(err) {
+				fmt.Println("Error loading data:", err)
+			}
+
+			return saveData.Bookmark
+		} else if choice == "s" {
+			saveData := &SaveData{}
+
+			// Load existing data from file
+			dataFilePath := GetDataFilePath()
+			if err := saveData.Load(dataFilePath); err != nil && !os.IsNotExist(err) {
+				fmt.Println("Error loading data:", err)
+			}
+
+			saveData.SetBookmark(id)
+
+			// Save data to file
+			if err := saveData.Save(dataFilePath); err != nil {
+				fmt.Println("Error saving data:", err)
+			}
+			
+			fmt.Println("Saved Bookmark!")
+
+			return id
+		} else {
+			fmt.Println("Please select either l or s")
+		}
+	}
+	return -1 
+}
+
+func LoadBookmark() int {
+	saveData := &SaveData{}
+
+	// Load existing data from file
+	dataFilePath := GetDataFilePath()
+	if err := saveData.Load(dataFilePath); err != nil && !os.IsNotExist(err) {
+		fmt.Println("Error loading data:", err)
+	}
+
+	return saveData.Bookmark
+
 }
