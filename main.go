@@ -411,8 +411,6 @@ func printVerses(db *sql.DB, passage Passage) {
 }
 
 
-
-
 // getIntsStartAndEnd parses a string in the format "start-end" (ie 5-10) and returns a slice of integers (ie [5,6,7,8,9,10]).
 func getIntsStartAndEnd(s string) ([]int, error) {
 	split := strings.Split(s, "-")
@@ -451,7 +449,6 @@ func clearConsole() {
 		}
 	}
 }
-
 
 
 // This is just for testing random things...
