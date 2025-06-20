@@ -366,20 +366,24 @@ func Favorites(db *sql.DB, id int) {
 
 	if saveData.ContainsFavorite(id) {
 		verse := GetVerseFromId(db, id)
-		fmt.Printf("%s %d:%d already in favorites!\n", verse.BookName, verse.Chapter, verse.Verse)
+		fmt.Printf("%s %d:%d already in favorites\n", verse.BookName, verse.Chapter, verse.Verse)
 		var choice string
 		fmt.Printf("Remove from favorites? (y or N) ")
 		fmt.Scanln(&choice)
 		if choice == "y" {
 			saveData.RemoveFavorite(id)
+			fmt.Println("Verse WAS removed from favorites")
 
 			// Save data to file
 			if err := saveData.Save(dataFilePath); err != nil {
 				fmt.Println("Error saving data:", err)
 			}
+		} else {
+			fmt.Println("Verse WAS NOT removed from favorites")
 		}
 	} else {
 		saveData.AddFavorite(id)
+		fmt.Println("Added verse to favorites")
 
 		// Save data to file
 		if err := saveData.Save(dataFilePath); err != nil {
@@ -389,7 +393,7 @@ func Favorites(db *sql.DB, id int) {
 }
 
 
-// This lists your favorites. 
+// This lists your favorites. (ie. bible -f)
 func ListFavorites(db *sql.DB) {
 	saveData := &SaveData{}
 
@@ -416,16 +420,10 @@ func BookMark(id int) int{
 		fmt.Printf("Would you like to load or save bookmark? (l or s) ")
 		fmt.Scanln(&choice)
 
+		// Load the bookmark
 		if choice == "l" {
-			saveData := &SaveData{}
-
-			// Load existing data from file
-			dataFilePath := GetDataFilePath()
-			if err := saveData.Load(dataFilePath); err != nil && !os.IsNotExist(err) {
-				fmt.Println("Error loading data:", err)
-			}
-
-			return saveData.Bookmark
+			// LoadBookmark returns the id of the bookmark, so this just returns the id of the bookmark. Cyclical...
+			return LoadBookmark()
 		} else if choice == "s" {
 			saveData := &SaveData{}
 
@@ -444,6 +442,7 @@ func BookMark(id int) int{
 			
 			fmt.Println("Saved Bookmark!")
 
+			// Just keep the user on the same verse. 
 			return id
 		} else {
 			fmt.Println("Please select either l or s")
@@ -452,6 +451,9 @@ func BookMark(id int) int{
 	return -1 
 }
 
+
+// This is the load function for the very beginning of interactive mode. It needs to be seperate because I 
+// don't want to have to send anything with it. It merely returns the int of the bookmark variable. 
 func LoadBookmark() int {
 	saveData := &SaveData{}
 
@@ -461,6 +463,10 @@ func LoadBookmark() int {
 		fmt.Println("Error loading data:", err)
 	}
 
-	return saveData.Bookmark
+	// If a bookmark hasn't been saved yet, just send the user to Genesis 1 1
+	if saveData.Bookmark == 0 {
+		return 1
+	}
 
+	return saveData.Bookmark
 }
