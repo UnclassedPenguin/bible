@@ -62,7 +62,7 @@ var embeddedDb []byte
 // The main function :p (The more comments the better!)
 func main() {
 	// Version number
-	version := "v0.1.5"
+	versionNumber := "v0.1.5"
 
 	// Create a temporary file to hold the embedded database
 	tmpFile, err := os.CreateTemp("", "kjv.db")
@@ -81,13 +81,13 @@ func main() {
 
 	// Command line flags
 	interactive := flag.Bool("i", false, "Enable interactive mode")
-	listMode := flag.Bool("l", false, "List Info")
-	versionMode := flag.Bool("v", false, "Print Version")
-	randomMode := flag.Bool("r", false, "Print random verse")
-	searchMode := flag.Bool("s", false, "search for term")
-	exactMode := flag.Bool("e", false, "search for exact term, use with -s")
-	testMode := flag.Bool("t", false, "Test function, for testing.")
-	favoriteMode := flag.Bool("f", false, "List favorite verses")
+	list := flag.Bool("l", false, "List Info")
+	version := flag.Bool("v", false, "Print Version")
+	random := flag.Bool("r", false, "Print random verse")
+	search := flag.Bool("s", false, "search for term")
+	exact := flag.Bool("e", false, "search for exact term, use with -s")
+	test := flag.Bool("t", false, "Test function, for testing.")
+	favorite := flag.Bool("f", false, "List favorite verses")
 	flag.Parse()
 
 	db, err := sql.Open("sqlite3", tmpFile.Name())
@@ -100,18 +100,18 @@ func main() {
 	switch {
 	case *interactive:
 		interactiveMode(db)
-	case *listMode:
-		infoMode(db)
-	case *versionMode:
-		fmt.Println(version)
-	case *randomMode:
+	case *list:
+		listMode(db)
+	case *version:
+		fmt.Println(versionNumber)
+	case *random:
 		printRandomVerse(db)
-	case *searchMode:
-		searchForTerm(db, *exactMode)
-	case *testMode:
+	case *search:
+		searchForTerm(db, *exact)
+	case *test:
 		testFunction(db)
-	case *favoriteMode:
-		favorite()
+	case *favorite:
+		favoriteMode()
 	default:
 		singleShotMode(db)
 	}
@@ -198,7 +198,7 @@ func interactiveMode(db *sql.DB) {
 
 
 // This is just to give info. If no other arguments, list all books. If only book, give number of chapters. If book and chapter, give number of verses.
-func infoMode(db *sql.DB) {
+func listMode(db *sql.DB) {
 	// Print all books
 	if len(os.Args) == 2 {
 		for i := 0; i < len(allBooks); i++ {
@@ -241,9 +241,9 @@ func printRandomVerse(db *sql.DB) {
 
 
 // Search for a term or an exact term
-func searchForTerm(db *sql.DB, exactMode bool) {
+func searchForTerm(db *sql.DB, exact bool) {
 	// This executes an exact search for the search term
-	if exactMode {
+	if exact {
 		query := "SELECT bookName, chapter, verse, text FROM bible WHERE text LIKE ?"
 		rows, err := db.Query(query, "% "+os.Args[3]+" %")
 		if err != nil {
@@ -311,7 +311,7 @@ func searchForTerm(db *sql.DB, exactMode bool) {
 	}
 }
 
-func favorite() {
+func favoriteMode() {
 	fmt.Println("Favorite mode")
 }
 
