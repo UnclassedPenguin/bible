@@ -139,13 +139,19 @@ func interactiveMode(db *sql.DB) {
 		} else if len(userInputSplit) == 1 && userInputSplit[0] == "b" {
 			id = f.LoadBookmark()
 			break
+		} else if len(userInputSplit) == 1 && userInputSplit[0] == "q" {
+			return
 		// If any other single character, prompt proper usage
 		} else if len(userInputSplit) == 1 {
 			fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
 		// If Specific book chapter verse to start at, get the id
 		} else {
 			id = f.ParseInteractiveCommand(db, userInputSplit)
-			break
+			if id == -1 {
+				fmt.Println("Please enter a valid verse\n")
+			} else {
+				break
+			}
 		}
 	}
 

@@ -133,6 +133,7 @@ func ParseInteractiveCommand(db *sql.DB, split []string) int {
 		id = GetIdOfVerse(db, bookName, chapter, verse)
 		return id
 	}
+
 	return -1
 }
 
@@ -143,8 +144,8 @@ func GetIdOfVerse(db *sql.DB, bookName string, chapter string, verse string) int
 	query := "SELECT id FROM bible WHERE bookName = ? AND chapter = ? AND verse = ?"
 	err := db.QueryRow(query, bookName, chapter, verse).Scan(&id)
 	if err != nil {
-		fmt.Printf("Can't get id of %s %s %s: ", bookName, chapter, verse)
-		fmt.Println(err)
+		fmt.Printf("Can't find %s %s %s\n\n", bookName, chapter, verse)
+		return -1
 	}
 	
 	return id
