@@ -363,6 +363,8 @@ func singleShotMode(db *sql.DB) {
 		passage.Chapter = os.Args[2]
 		passage.Verse = os.Args[3]
 		printVerses(db, passage)
+	} else {
+		fmt.Println("Please enter a correct verse")
 	}
 }
 
