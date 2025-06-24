@@ -17,7 +17,7 @@ This program is basically done. Check out [the docs](https://docs.unclassed.ca/b
 - [x] Write documentation for program  
 - [x] Clean up interactive mode, make it not so ugly  
     - [x] Interactive should be able to basically have a command line, sort of like vim. That at anytime you can do a book or a chapter or a verse  
-[x]dd[x]  a print function that wraps the print, so It doesn't split words
+- [x] Add a print function that wraps the print, so It doesn't split words
 - [x] Combine if statements in infoMode function. Should be if else if  
 - [x] Combine if statements in singleShotMode function. Should be if else if  
 - [x] I think maybe i could change passage struct to have chapter and verse as int. It might clean up some code where I dont have to convert back and forth? Could change printVerse function  
