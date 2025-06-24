@@ -3,6 +3,7 @@ This program is basically done. Check out [the docs](https://docs.unclassed.ca/b
 ## Todo:  
 - [ ] Need to find any more error handling that needs to be done  
 - [ ] Need to update help usage (-h flag) to add info about how to use single shot mode  
+- [ ] Comment out test function  
 
 ## Finished:
 - [x] Add a way to list all books  
