@@ -86,7 +86,7 @@ func main() {
 	random := flag.Bool("r", false, "Print random verse")
 	search := flag.Bool("s", false, "search for term")
 	exact := flag.Bool("e", false, "search for exact term, use with -s")
-	//test := flag.Bool("t", false, "Test function, for testing.")
+	test := flag.Bool("t", false, "Test function, for testing.")
 	favorite := flag.Bool("f", false, "List favorite verses")
 	flag.Parse()
 
@@ -108,8 +108,8 @@ func main() {
 		printRandomVerse(db)
 	case *search:
 		searchForTerm(db, *exact)
-	//case *test:
-		//testFunction(db)
+	case *test:
+		testFunction(db)
 	case *favorite:
 		favoriteMode(db)
 	default:
@@ -350,8 +350,13 @@ func singleShotMode(db *sql.DB) {
 	// If just a book is provided, Print number of chapters.
 	if len(os.Args) == 2 {
 		chapters := f.GetAllChaptersInBook(db, passage.BookName)
-		fmt.Printf("Chapters in %s: %d\n", passage.BookName, chapters)
-		fmt.Println()
+		if chapters == 0 {
+			fmt.Printf("Can't find book \"%s\"\n\n", passage.BookName)
+			return
+		} else {
+			fmt.Printf("Chapters in %s: %d\n", passage.BookName, chapters)
+			fmt.Println()
+		}
 
 	// if a book and a chapter, print the entire chapter
 	} else if len(os.Args) == 3 {
@@ -364,7 +369,7 @@ func singleShotMode(db *sql.DB) {
 		passage.Verse = os.Args[3]
 		printVerses(db, passage)
 	} else {
-		fmt.Println("Please enter a correct verse")
+		fmt.Println("Please enter a correct verse\n")
 	}
 }
 
@@ -468,7 +473,7 @@ func clearConsole() {
 
 
 // This is just for testing random things...
-//func testFunction(db *sql.DB) {
+func testFunction(db *sql.DB) {
 	//var book string
 	//var chapter string
 	//var verse string
@@ -481,4 +486,5 @@ func clearConsole() {
 
 	//id := f.GetIdOfVerse(db, book, chapter, verse)
 	//fmt.Printf("ID: %d\n", id)
-//}
+	f.GetAllChaptersInBook(db, "gensis")
+}

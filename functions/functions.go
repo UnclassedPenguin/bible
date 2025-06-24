@@ -65,7 +65,7 @@ func PrintVerse(db *sql.DB, book string, chapter string, verse string) {
 	var bibleVerse Bible
 	err := db.QueryRow("SELECT id, bookName, chapter, verse, text FROM bible where bookName = ? AND chapter = ? AND verse = ?", book, chapterInt, verseInt).Scan(&bibleVerse.ID, &bibleVerse.BookName, &bibleVerse.Chapter, &bibleVerse.Verse, &bibleVerse.Text)
 	if err != nil {
-		fmt.Printf("Can't find %s %s %s\n", book, chapter, verse)
+		fmt.Printf("Can't find %s %s %s\n\n", book, chapter, verse)
 		return
 	}
 	fmt.Printf("%s %s:%s\n", book, chapter, verse)
