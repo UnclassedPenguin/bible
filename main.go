@@ -147,6 +147,7 @@ func interactiveMode(db *sql.DB) {
 		// If Specific book chapter verse to start at, get the id
 		} else {
 			id = f.ParseInteractiveCommand(db, userInputSplit)
+			// Check if not valid input ParseInteractiveCommand returns -1 on failure.
 			if id == -1 {
 				fmt.Println("Please enter a valid verse\n")
 			} else {
@@ -201,7 +202,14 @@ func interactiveMode(db *sql.DB) {
 				fmt.Println("Invalid input. Please enter 'n', 'p', 'r' or 'q'.")
 			}
 		} else {
+			// Capture current id incase of failure
+			oldid := id
 			id = f.ParseInteractiveCommand(db, inputSplit)
+			// Check if failure. ParseInteractiveCommand returns -1 on failure, so prompt user, and set id back to the current verse id
+			if id == -1 {
+				fmt.Printf("Please enter a valid verse\n")
+				id = oldid
+			}
 		}
 
 		// Clear the console for better readability

@@ -127,7 +127,7 @@ func ParseInteractiveCommand(db *sql.DB, split []string) int {
 		id = GetIdOfVerse(db, bookName, chapter, verse)
 		return id
 	// If not a numbered book, get the verse
-	} else {
+	} else if len(split) == 3 {
 		bookName = split[0]
 		chapter = split[1]
 		verse = split[2]
@@ -136,6 +136,7 @@ func ParseInteractiveCommand(db *sql.DB, split []string) int {
 	}
 
 	return -1
+
 }
 
 
