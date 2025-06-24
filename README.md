@@ -1,7 +1,8 @@
 This program is basically done. Check out [the docs](https://docs.unclassed.ca/bible)  
 
 ## Todo:  
-- [ ] Need to fix in interactive mode what happens when you enter a verse that doesnt exist
+- [ ] Need to find any more error handling that needs to be done  
+- [ ] Need to update help usage to add info about single ahot mode  
 
 ## Finished:
 - [x] Add a way to list all books  
@@ -25,3 +26,4 @@ This program is basically done. Check out [the docs](https://docs.unclassed.ca/b
 - [x] Add favorite function  
 - [ ] Add a print all?  
     - [x] nah
+- [x] Need to fix in interactive mode what happens when you enter a verse that doesnt exist
