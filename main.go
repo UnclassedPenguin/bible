@@ -392,10 +392,16 @@ func printChapters(db *sql.DB, passage Passage) {
 
 		// For every chapter
 		for i := 0 ; i < len(chapters); i++{
-			fmt.Printf("%s Chapter %d\n\n", passage.BookName, chapters[i])
 			// We need to get the number of verses for the chapter
 			verses := f.GetAllVersesInChapter(db, passage.BookName, strconv.Itoa(chapters[i]))
 
+			// Check if returned 0. This means the chapter doens't exist
+			if verses == 0 {
+				fmt.Printf("Can't find chapter %d in book \"%s\"\n\n", chapters[i], passage.BookName)
+				return
+			}
+
+			fmt.Printf("%s Chapter %d\n\n", passage.BookName, chapters[i])
 			// For every verse
 			for j := 1; j <= verses; j++ {
 				f.PrintVerse(db, passage.BookName, strconv.Itoa(chapters[i]), strconv.Itoa(j))
@@ -405,6 +411,11 @@ func printChapters(db *sql.DB, passage Passage) {
 	// This is for a single chapter ie "bible "1 Corinthians" 1"
 	} else {
 		verses := f.GetAllVersesInChapter(db, passage.BookName, passage.Chapter)
+		// Check if returned 0. This means that the chapter doesn't exist. 
+		if verses == 0 {
+			fmt.Printf("Can't find chapter %s in book \"%s\"\n\n", passage.Chapter, passage.BookName)
+			return
+		}
 
 		for i := 1; i <= verses; i++ {
 			f.PrintVerse(db, passage.BookName, passage.Chapter, strconv.Itoa(i))
