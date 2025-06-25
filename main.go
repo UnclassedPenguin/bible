@@ -88,6 +88,20 @@ func main() {
 	exact := flag.Bool("e", false, "search for exact term, use with -s")
 	test := flag.Bool("t", false, "Test function, for testing.")
 	favorite := flag.Bool("f", false, "List favorite verses")
+
+  	// This changes the help/usage info when -h is used.
+	flag.Usage = func() {
+		w := flag.CommandLine.Output() // may be os.Stderr - but not necessarily
+		description := "%s\n\n" +
+		"This program lets you read the bible in the command line.\n\n" +
+		" Basic Usage:\n\n" +
+		" \"bible Genesis 1 1\" or \"bible -i\"\n\n" +
+		"Available arguments:\n"
+		fmt.Fprintf(w, description, os.Args[0])
+		flag.PrintDefaults()
+		//fmt.Fprintf(w, "...custom postamble ... \n")
+	}	
+
 	flag.Parse()
 
 	db, err := sql.Open("sqlite3", tmpFile.Name())
