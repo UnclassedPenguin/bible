@@ -86,8 +86,8 @@ func main() {
 	random := flag.Bool("r", false, "Print random verse")
 	search := flag.Bool("s", false, "search for term")
 	exact := flag.Bool("e", false, "search for exact term, use with -s")
-	test := flag.Bool("t", false, "Test function, for testing.")
 	favorite := flag.Bool("f", false, "List favorite verses")
+	//test := flag.Bool("t", false, "Test function, for testing.")
 
   	// This changes the help/usage info when -h is used.
 	flag.Usage = func() {
@@ -122,8 +122,8 @@ func main() {
 		printRandomVerse(db)
 	case *search:
 		searchForTerm(db, *exact)
-	case *test:
-		testFunction(db)
+	//case *test:
+		//testFunction(db)
 	case *favorite:
 		favoriteMode(db)
 	default:
@@ -514,7 +514,7 @@ func clearConsole() {
 
 
 // This is just for testing random things...
-func testFunction(db *sql.DB) {
+//func testFunction(db *sql.DB) {
 	//var book string
 	//var chapter string
 	//var verse string
@@ -527,5 +527,5 @@ func testFunction(db *sql.DB) {
 
 	//id := f.GetIdOfVerse(db, book, chapter, verse)
 	//fmt.Printf("ID: %d\n", id)
-	f.GetAllChaptersInBook(db, "gensis")
-}
+	//f.GetAllChaptersInBook(db, "gensis")
+//}
