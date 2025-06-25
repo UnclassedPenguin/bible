@@ -91,6 +91,19 @@ func GetUserInput(prompt string) []string {
 }
 
 
+// Prints help when you use ? or h in interactive mode
+func PrintInteractiveHelp() {
+	fmt.Println("\nTo get to a specific verse just type in the verse, ie Genesis 1 1, or \"1 John\" 5 10\n")
+	fmt.Println("Interactive Commands:")
+	fmt.Println("    b ......... bookmark")
+	fmt.Println("    f ......... favorite")
+	fmt.Println("    n ......... next verse")
+	fmt.Println("    p ......... previous verse")
+	fmt.Println("    r ......... random verse")
+	fmt.Println("    q ......... quit")
+	fmt.Println("    h or ? .... print this help usage\n")
+}
+
 //  Takes the command from interactive mode (if it is more than a single character), returns the id of the verse to go to
 func ParseInteractiveCommand(db *sql.DB, split []string) int {
 	var bookName string

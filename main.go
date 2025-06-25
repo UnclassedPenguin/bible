@@ -155,6 +155,10 @@ func interactiveMode(db *sql.DB) {
 			break
 		} else if len(userInputSplit) == 1 && userInputSplit[0] == "q" {
 			return
+		} else if len(userInputSplit) == 1 && userInputSplit[0] == "?" {
+			f.PrintInteractiveHelp()
+		} else if len(userInputSplit) == 1 && userInputSplit[0] == "h" {
+			f.PrintInteractiveHelp()
 		// If any other single character, prompt proper usage
 		} else if len(userInputSplit) == 1 {
 			fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
@@ -171,7 +175,7 @@ func interactiveMode(db *sql.DB) {
 	}
 
 	// Print info for usage for user 1 time at beginning
-	fmt.Print("\nPress 'n' for next verse, 'p' for prev, 'r' for random, or 'q' to quit: \n\n")
+	fmt.Print("\nPress 'n' for next verse, 'p' for prev, 'r' for random, '?' for help, or 'q' to quit: \n\n")
 
 	// This is the main loop of interactive mode. Prints out the verse based on the id number
 	for {
@@ -204,6 +208,10 @@ func interactiveMode(db *sql.DB) {
 				id = f.BookMark(bibleVerse.ID)
 			case "f":
 				f.Favorites(db, bibleVerse.ID)
+			case "?":
+				f.PrintInteractiveHelp()
+			case "h":
+				f.PrintInteractiveHelp()
 			case "r": // Get a random verse
 				passage := f.RandomVerse(db)
 				//Get id of random verse
