@@ -2,6 +2,7 @@ This program is basically done. Check out [the docs](https://docs.unclassed.ca/b
 
 ## Todo:  
 - [ ] Need to find any more error handling that needs to be done  
+- [ ] Change description in PrintInteractiveHelp to be shorter, or use wordwrap.  
 
 ## Finished:
 - [x] Add a way to list all books  
