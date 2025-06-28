@@ -2,7 +2,6 @@ This program is basically done. Check out [the docs](https://docs.unclassed.ca/b
 
 ## Todo:  
 - [ ] Need to find any more error handling that needs to be done  
-- [ ] Change description in PrintInteractiveHelp to be shorter, or use wordwrap.  
 
 ## Finished:
 - [x] Add a way to list all books  
@@ -30,3 +29,4 @@ This program is basically done. Check out [the docs](https://docs.unclassed.ca/b
 - [x] Need to update help usage (-h flag) to add info about how to use single shot mode  
 - [x] Add f.PrintInteractiveHelp function to print help usage when "?" entered at interactive prompt.  
 - [x] Comment out test function  
+- [x] Change description in PrintInteractiveHelp to be shorter, or use wordwrap.  
