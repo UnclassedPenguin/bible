@@ -161,7 +161,7 @@ func interactiveMode(db *sql.DB) {
 			f.PrintInteractiveHelp()
 		// If any other single character, prompt proper usage
 		} else if len(userInputSplit) == 1 {
-			fmt.Println("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
+			f.WordWrap("Please enter either a book chapter verse(ie Genesis 1 1) or 'r' for random verse")
 		// If Specific book chapter verse to start at, get the id
 		} else {
 			id = f.ParseInteractiveCommand(db, userInputSplit)
@@ -175,7 +175,7 @@ func interactiveMode(db *sql.DB) {
 	}
 
 	// Print info for usage for user 1 time at beginning
-	fmt.Print("\nPress 'n' for next verse, 'p' for prev, 'r' for random, '?' for help, or 'q' to quit: \n\n")
+	f.WordWrap("\nPress 'n' for next verse, 'p' for prev, 'r' for random, '?' for help, or 'q' to quit: \n\n")
 
 	// This is the main loop of interactive mode. Prints out the verse based on the id number
 	for {

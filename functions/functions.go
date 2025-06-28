@@ -93,7 +93,7 @@ func GetUserInput(prompt string) []string {
 
 // Prints help when you use ? or h in interactive mode
 func PrintInteractiveHelp() {
-	fmt.Println("\nTo get to a specific verse just type in the verse, ie Genesis 1 1, or \"1 John\" 5 10\n")
+	WordWrap("\nTo get to a specific verse just type in the verse, ie Genesis 1 1, or \"1 John\" 5 10\n\n")
 	fmt.Println("Interactive Commands:")
 	fmt.Println("    b ......... bookmark")
 	fmt.Println("    f ......... favorite")
