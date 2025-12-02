@@ -245,14 +245,20 @@ func interactiveMode(db *sql.DB) {
 func listMode(db *sql.DB) {
 	// Print all books
 	if len(os.Args) == 2 {
+		var allBooksString string
 		for i := 0; i < len(allBooks); i++ {
 			// This is just for formatting. No comma and newline on last one
 			if i == len(allBooks)-1 {
-				fmt.Printf("%s\n", allBooks[i])
+				//fmt.Printf("%s\n", allBooks[i])
+				allBooksString += allBooks[i] + "\n"
+			// If not last one, just append the book with a comma
 			} else {
-				fmt.Printf("%s, ", allBooks[i])
+				//fmt.Printf("%s, ", allBooks[i])
+				allBooksString += allBooks[i] + ", "
 			}
 		}
+
+		f.WordWrap(allBooksString)	
 	
 	// If just a book is provided, print Number of chapters
 	} else if len(os.Args) == 3 {
