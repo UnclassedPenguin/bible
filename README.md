@@ -1,7 +1,6 @@
 This program is basically done. Check out [the docs](https://docs.unclassed.ca/bible)  
 
 ## Todo:  
-- [ ] When you do bible -l I don't think it has wordwrap
 - [ ] Need to find any more error handling that needs to be done  
 
 ## Finished:
@@ -31,3 +30,4 @@ This program is basically done. Check out [the docs](https://docs.unclassed.ca/b
 - [x] Add f.PrintInteractiveHelp function to print help usage when "?" entered at interactive prompt.  
 - [x] Comment out test function  
 - [x] Change description in PrintInteractiveHelp to be shorter, or use wordwrap.  
+- [x] When you do bible -l I don't think it has wordwrap
